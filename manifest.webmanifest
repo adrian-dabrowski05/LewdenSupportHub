@@ -1,0 +1,15 @@
+{
+  "name": "Lewden Support Hub",
+  "short_name": "Support Hub",
+  "description": "EVSE support engineer hub — tickets, customers, chargers and site visits.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#262626",
+  "theme_color": "#209f95",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

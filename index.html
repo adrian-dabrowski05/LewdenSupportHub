@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#209f95" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/favicon.png" />
+<title>Lewden Support Hub</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+<style>
+:root{
+  --accent:#209f95; --accent2:#2fd0c0;
+  --s-new:#0A84FF; --s-ongoing:#32ADE6; --s-await:#FF9F0A; --s-follow:#BF5AF2; --s-solved:#30D158; --s-closed:#8E8E93;
+  --g-warning:#FFD60A; --g-serious:#FF9F0A; --g-fatal:#FF453A; --g-power:#FF375F;
+  --p-low:#8E8E93; --p-med:#0A84FF; --p-high:#FF9F0A; --p-urgent:#FF453A;
+}
+[data-theme="dark"]{
+  --bg0:#262626; --bg1:#333333; --ink:#f2f2f2; --ink2:#b0b0b0; --ink3:#7e7e7e;
+  --glass:rgba(60,60,60,0.55); --glass2:rgba(46,46,46,0.5); --hair:rgba(255,255,255,0.10);
+  --hair-hi:rgba(255,255,255,0.22); --field:rgba(30,30,30,0.55); --shadow:rgba(0,0,0,0.5);
+  --blob1:rgba(32,159,149,0.22); --blob2:rgba(47,208,192,0.13); --blob3:rgba(120,120,120,0.12); --blobop:.45;
+}
+[data-theme="light"]{
+  --bg0:#eef1f7; --bg1:#dfe6f2; --ink:#0a0e17; --ink2:#43505f; --ink3:#8a94a3;
+  --glass:rgba(255,255,255,0.55); --glass2:rgba(255,255,255,0.42); --hair:rgba(255,255,255,0.7);
+  --hair-hi:rgba(255,255,255,0.95); --field:rgba(255,255,255,0.6); --shadow:rgba(60,80,120,0.22);
+  --blob1:rgba(10,132,255,0.34); --blob2:rgba(48,213,200,0.30); --blob3:rgba(191,90,242,0.22); --blobop:.9;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body,#root{height:100%}
+body{
+  margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);background:var(--bg0);overflow:hidden;
+  -webkit-font-smoothing:antialiased;letter-spacing:-0.01em;
+}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:0}
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:
+  radial-gradient(120% 90% at 50% -10%, var(--bg1), var(--bg0) 60%)}
+.blob{position:absolute;border-radius:50%;filter:blur(72px);opacity:var(--blobop,.9);will-change:transform}
+.blob.b1{width:46vw;height:46vw;background:var(--blob1);top:-12vh;left:-8vw;animation:drift1 26s ease-in-out infinite}
+.blob.b2{width:40vw;height:40vw;background:var(--blob2);bottom:-14vh;right:-6vw;animation:drift2 32s ease-in-out infinite}
+.blob.b3{width:32vw;height:32vw;background:var(--blob3);top:38%;left:42%;animation:drift3 38s ease-in-out infinite}
+@keyframes drift1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(6vw,8vh) scale(1.12)}}
+@keyframes drift2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-7vw,-6vh) scale(1.1)}}
+@keyframes drift3{0%,100%{transform:translate(-50%,-50%) scale(1)}50%{transform:translate(-58%,-42%) scale(1.18)}}
+
+.app{position:relative;z-index:1;height:100%;display:flex}
+.rail{width:248px;flex:0 0 248px;padding:18px 14px;display:flex;flex-direction:column;gap:6px}
+.brand{display:flex;align-items:center;gap:11px;padding:10px 12px 16px}
+.logo{width:34px;height:34px;border-radius:11px;background:linear-gradient(140deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;box-shadow:0 6px 16px rgba(10,132,255,.4)}
+.logo svg{width:19px;height:19px}
+.brand .t{font-weight:700;font-size:15px;line-height:1.1}
+.brand .s{font-size:11px;color:var(--ink3)}
+.nav{display:flex;flex-direction:column;gap:3px}
+.nav button{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;color:var(--ink2);
+  font:inherit;font-size:14.5px;font-weight:550;padding:10px 13px;border-radius:13px;cursor:pointer;text-align:left;
+  transition:background .18s,color .18s,transform .12s}
+.nav button:hover{background:var(--hair);color:var(--ink)}
+.nav button.on{color:var(--ink);background:var(--glass);border:1px solid var(--hair);
+  box-shadow:inset 0 1px 0 var(--hair-hi),0 4px 14px var(--shadow);backdrop-filter:blur(14px)}
+.nav button svg{width:18px;height:18px;flex:0 0 18px;opacity:.9}
+.nav .count{margin-left:auto;font-size:11px;font-weight:700;background:var(--accent);color:#fff;border-radius:20px;padding:1px 7px}
+.rail .me{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;
+  background:var(--glass2);border:1px solid var(--hair);backdrop-filter:blur(14px)}
+.avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,var(--accent2),var(--accent));
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:12px}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;height:100%}
+.topbar{display:flex;align-items:center;gap:14px;padding:16px 24px 8px}
+.topbar h1{margin:0;font-size:23px;font-weight:730;letter-spacing:-0.025em}
+.topbar .sub{font-size:12.5px;color:var(--ink3);margin-top:1px}
+.topbar .sp{flex:1}
+.scroll{flex:1;overflow-y:auto;padding:8px 24px 110px;scroll-behavior:smooth}
+.page{animation:pop .38s cubic-bezier(.32,.72,0,1)}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.glass{background:var(--glass);border:1px solid var(--hair);border-radius:22px;backdrop-filter:blur(26px) saturate(180%);
+  -webkit-backdrop-filter:blur(26px) saturate(180%);box-shadow:inset 0 1px 0 var(--hair-hi),0 10px 34px var(--shadow);position:relative}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.10),transparent 38%)}
+.pad{padding:18px}
+.grid{display:grid;gap:14px}
+.cols-4{grid-template-columns:repeat(4,1fr)}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+.cols-2{grid-template-columns:repeat(2,1fr)}
+
+.stat{padding:16px 17px}
+.stat .k{font-size:12px;color:var(--ink2);font-weight:600;display:flex;align-items:center;gap:7px}
+.stat .v{font-size:30px;font-weight:760;margin-top:8px;letter-spacing:-0.03em}
+.stat .d{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.stat .ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;margin-left:auto}
+.stat .ic svg{width:16px;height:16px}
+.statrow{display:flex;align-items:center}
+
+.sectitle{font-size:13px;font-weight:680;color:var(--ink2);text-transform:uppercase;letter-spacing:.06em;margin:22px 2px 10px}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--hair);cursor:pointer;
+  transition:background .15s}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--hair)}
+.row .grow{flex:1;min-width:0}
+.row .ttl{font-weight:610;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .meta{font-size:12px;color:var(--ink3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:680;padding:4px 10px;border-radius:30px;
+  border:1px solid var(--hair);background:var(--glass2);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:10px;
+  background:var(--field);border:1px solid var(--hair);color:var(--ink2)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--hair);background:var(--glass2);
+  color:var(--ink);font:inherit;font-size:13.5px;font-weight:620;padding:9px 15px;border-radius:13px;cursor:pointer;
+  backdrop-filter:blur(14px);transition:transform .12s,background .15s,box-shadow .15s}
+.btn:hover{background:var(--hair)}
+.btn:active{transform:scale(.96)}
+.btn svg{width:16px;height:16px}
+.btn.pri{background:linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000));border-color:transparent;color:#fff;
+  box-shadow:0 6px 18px color-mix(in srgb,var(--accent) 42%,transparent)}
+.btn.pri:hover{filter:brightness(1.07)}
+.btn.sm{padding:6px 11px;font-size:12.5px;border-radius:11px}
+.btn.danger{color:var(--g-fatal)}
+.iconbtn{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;border:1px solid var(--hair);
+  background:var(--glass2);cursor:pointer;color:var(--ink);backdrop-filter:blur(14px);transition:transform .12s,background .15s}
+.iconbtn:hover{background:var(--hair)}.iconbtn:active{transform:scale(.92)}.iconbtn svg{width:18px;height:18px}
+
+.search{display:flex;align-items:center;gap:9px;background:var(--field);border:1px solid var(--hair);border-radius:13px;
+  padding:9px 13px;flex:1;min-width:0;backdrop-filter:blur(14px)}
+.search input{border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;flex:1;outline:none}
+.search svg{width:16px;height:16px;color:var(--ink3)}
+
+label.f{display:block;margin-bottom:13px}
+label.f .lab{font-size:12px;font-weight:640;color:var(--ink2);margin-bottom:6px;display:block}
+.inp,select.inp,textarea.inp{width:100%;border:1px solid var(--hair);background:var(--field);color:var(--ink);
+  font:inherit;font-size:14px;padding:10px 12px;border-radius:12px;outline:none;backdrop-filter:blur(10px);transition:border .15s,box-shadow .15s}
+.inp:focus,select.inp:focus,textarea.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(10,132,255,.22)}
+textarea.inp{resize:vertical;min-height:78px;line-height:1.45}
+select.inp{appearance:none;cursor:pointer}
+
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(2,6,14,.45);backdrop-filter:blur(8px);
+  display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;animation:fade .25s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{width:100%;max-width:560px;margin:auto 0;animation:rise .4s cubic-bezier(.32,.72,0,1)}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:none}}
+.modal .hd{display:flex;align-items:center;gap:12px;padding:18px 20px;border-bottom:1px solid var(--hair)}
+.modal .hd h2{margin:0;font-size:17px;font-weight:700}
+.modal .bd{padding:20px;max-height:62vh;overflow-y:auto}
+.modal .ft{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px;border-top:1px solid var(--hair)}
+
+.kv{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--hair);font-size:13.5px}
+.kv:last-child{border-bottom:0}
+.kv .k{color:var(--ink3);font-weight:560}.kv .v{font-weight:600;text-align:right;word-break:break-word}
+.empty{text-align:center;padding:40px 20px;color:var(--ink3)}
+.empty svg{width:34px;height:34px;opacity:.5;margin-bottom:10px}
+.note{padding:12px 14px;border-radius:13px;background:var(--field);border:1px solid var(--hair);margin-bottom:10px;font-size:13.5px;line-height:1.5}
+.note .nm{font-size:11px;color:var(--ink3);margin-top:7px;display:flex;gap:8px}
+.timeline{position:relative;padding-left:20px}
+.timeline::before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--hair)}
+.tl{position:relative;padding:0 0 16px 6px}
+.tl::before{content:"";position:absolute;left:-18px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--bg0)}
+
+.tabbar{display:none}
+.fab{display:none}
+.linkrow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:var(--field);border:1px solid var(--hair);margin-bottom:8px}
+.check{appearance:none;width:21px;height:21px;border-radius:7px;border:2px solid var(--ink3);cursor:pointer;flex:0 0 21px;position:relative;transition:.15s}
+.check:checked{background:var(--s-solved);border-color:var(--s-solved)}
+.check:checked::after{content:"";position:absolute;left:6px;top:2px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.seg{display:inline-flex;background:var(--field);border:1px solid var(--hair);border-radius:12px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:12.5px;font-weight:620;padding:6px 12px;border-radius:9px;cursor:pointer;transition:.15s}
+.seg button.on{background:var(--glass);color:var(--ink);box-shadow:0 2px 8px var(--shadow)}
+.wrapflex{display:flex;flex-wrap:wrap;gap:8px}
+
+.combo{margin-top:6px;border:1px solid var(--hair);border-radius:12px;background:var(--field);overflow:hidden;max-height:248px;overflow-y:auto;backdrop-filter:blur(10px)}
+.comboitem{display:flex;flex-direction:column;gap:2px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--hair)}
+.comboitem:last-child{border-bottom:0}
+.comboitem:hover{background:var(--hair)}
+.comboitem .mt{font-size:12px;color:var(--ink3)}
+.tagchip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:11px;background:var(--field);border:1px solid var(--hair);font-size:13px;font-weight:600}
+.tagchip button{border:0;background:transparent;color:var(--ink3);cursor:pointer;display:grid;place-items:center;padding:0}
+.tagchip button svg{width:14px;height:14px}
+.rec{padding:13px 15px;border-radius:14px;background:var(--field);border:1px solid var(--hair);margin-bottom:10px}
+
+.dash{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.sp1{grid-column:span 1}.sp2{grid-column:span 2}.sp4{grid-column:span 4}
+.wcard{position:relative;min-width:0}
+.editing .wcard{outline:1.6px dashed var(--hair-hi);outline-offset:-3px;cursor:grab;border-radius:22px}
+.editing .wcard:active{cursor:grabbing}
+.wcard.drag{opacity:.35}
+.grip{position:absolute;top:8px;right:8px;z-index:3;width:26px;height:26px;border-radius:9px;display:none;
+  place-items:center;background:var(--glass);border:1px solid var(--hair);color:var(--ink2);backdrop-filter:blur(10px)}
+.editing .grip{display:grid}
+.grip svg{width:15px;height:15px}
+[data-density="compact"] .pad{padding:13px}
+[data-density="compact"] .row{padding:9px 14px}
+[data-density="compact"] .stat{padding:12px 13px}
+[data-density="compact"] .stat .v{font-size:25px;margin-top:5px}
+[data-density="compact"] .scroll{padding-top:4px}
+[data-motion="off"] *{animation:none!important;transition:none!important}
+.btn:disabled{opacity:.45;cursor:default}
+.authwrap{position:relative;z-index:1;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+.authwrap .logo{width:40px;height:40px;border-radius:13px}
+.authwrap h2{font-size:19px;font-weight:720;letter-spacing:-0.02em}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:200;max-width:90vw;
+  background:var(--glass);border:1px solid var(--hair);border-left:3px solid var(--g-fatal);color:var(--ink);
+  padding:11px 16px;border-radius:13px;font-size:13.5px;font-weight:560;backdrop-filter:blur(20px);box-shadow:0 10px 30px var(--shadow);animation:rise .3s}
+
+@media (max-width:860px){
+  .dash{grid-template-columns:repeat(2,1fr)}
+  .sp2,.sp4{grid-column:span 2}
+  .rail{display:none}
+  .scroll{padding:8px 15px 120px}
+  .topbar{padding:14px 16px 6px}
+  .cols-4{grid-template-columns:repeat(2,1fr)}
+  .cols-3,.cols-2{grid-template-columns:1fr}
+  .tabbar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:40;padding:9px 8px calc(9px + env(safe-area-inset-bottom));
+    justify-content:flex-start;gap:2px;overflow-x:auto;background:var(--glass);border-top:1px solid var(--hair);backdrop-filter:blur(26px) saturate(180%)}
+  .tabbar::-webkit-scrollbar{display:none}
+  .tabbar button{border:0;background:transparent;color:var(--ink3);font:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:10px;font-weight:600;cursor:pointer;padding:4px 6px;border-radius:10px;transition:.15s;flex:0 0 auto;min-width:58px}
+  .tabbar button.on{color:var(--accent)}
+  .tabbar button svg{width:22px;height:22px}
+  .fab{display:grid;place-items:center;position:fixed;right:18px;bottom:calc(74px + env(safe-area-inset-bottom));z-index:41;
+    width:56px;height:56px;border-radius:19px;border:0;background:linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000));color:#fff;
+    box-shadow:0 10px 26px color-mix(in srgb,var(--accent) 50%,transparent);cursor:pointer}
+  .fab svg{width:26px;height:26px}
+  .modal{max-width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;transition-duration:.001s!important}}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--hair);border-radius:9px}
+</style>
+</head>
+<body data-theme="dark">
+<div id="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useMemo,useEffect,useRef} = React;
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id'+Math.random().toString(36).slice(2));
+
+/* ---------- icons ---------- */
+const I = {
+  bolt:<path d="M13 2 4.5 13.5H11l-1 8.5L19.5 10H13z"/>,
+  grid:<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/>,
+  ticket:<path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z M13 5v14"/>,
+  users:<path d="M16 18v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 9a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 18v-1a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/>,
+  charger:<path d="M7 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM9 7h3M16 9h2a2 2 0 0 1 2 2v3a2 2 0 0 0 2 2"/>,
+  check:<path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>,
+  note:<path d="M14 3v4a1 1 0 0 0 1 1h4M16 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>,
+  alert:<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>,
+  search:<path d="M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3"/>,
+  plus:<path d="M12 5v14M5 12h14"/>,
+  x:<path d="M18 6 6 18M6 6l12 12"/>,
+  back:<path d="M19 12H5M12 19l-7-7 7-7"/>,
+  clock:<path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2"/>,
+  pin:<path d="M9 4h6l-1 7 4 3v2H6v-2l4-3z M12 16v5"/>,
+  edit:<path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>,
+  trash:<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>,
+  link:<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/>,
+  sun:<path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>,
+  moon:<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>,
+  cog:<React.Fragment><circle cx="12" cy="12" r="3"/><path d="M19.4 13a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></React.Fragment>,
+  ext:<React.Fragment><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></React.Fragment>,
+  grip:<path d="M8 6h.01M8 12h.01M8 18h.01M16 6h.01M16 12h.01M16 18h.01"/>,
+  layout:<path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 9h18M9 21V9"/>,
+  clipboard:<React.Fragment><rect x="8" y="3" width="8" height="4" rx="1"/><path d="M9 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3"/><path d="M9 13h6M9 17h4"/></React.Fragment>,
+  wrench:<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.4 2.4-2.6-.4-.4-2.6z"/>,
+  phone:<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.4-1.2a2 2 0 0 1 2.1-.5c.9.3 1.7.6 2.7.7a2 2 0 0 1 1.7 2z"/>,
+  mail:<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 7l-10 6L2 7"/>,
+  pin2:<path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>,
+  flame:<path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-2.5C8 9 12 8 12 2z M8.5 14a3.5 3.5 0 1 0 7 0c0-2-2-3-3.5-5-1.5 2-3.5 3-3.5 5z"/>,
+};
+const Icon = ({n,style}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={style}>{I[n]}</svg>;
+
+/* ---------- status meta ---------- */
+const STATUS = [
+  {id:'new',label:'New',c:'var(--s-new)'},
+  {id:'ongoing',label:'Ongoing',c:'var(--s-ongoing)'},
+  {id:'awaiting',label:'Awaiting customer',c:'var(--s-await)'},
+  {id:'follow',label:'Follow-up',c:'var(--s-follow)'},
+  {id:'solved',label:'Solved',c:'var(--s-solved)'},
+  {id:'closed',label:'Closed',c:'var(--s-closed)'},
+];
+const PRIORITY = [
+  {id:'low',label:'Low',c:'var(--p-low)'},{id:'medium',label:'Medium',c:'var(--p-med)'},
+  {id:'high',label:'High',c:'var(--p-high)'},{id:'urgent',label:'Urgent',c:'var(--p-urgent)'},
+];
+const GRADE_C = {'Warning failure':'var(--g-warning)','Serious failure':'var(--g-serious)','Fatal failure':'var(--g-fatal)','Power failure':'var(--g-power)'};
+const VISIT_TYPES = [
+  {id:'callout',label:'Callout',c:'var(--p-urgent)'},
+  {id:'maintenance',label:'Maintenance',c:'var(--accent)'},
+  {id:'install',label:'Install',c:'var(--s-solved)'},
+  {id:'inspection',label:'Inspection',c:'var(--s-follow)'},
+];
+const OUTCOMES = [
+  {id:'resolved',label:'Resolved',c:'var(--s-solved)'},
+  {id:'monitoring',label:'Monitoring',c:'var(--s-await)'},
+  {id:'followup',label:'Follow-up needed',c:'var(--s-follow)'},
+  {id:'escalated',label:'Escalated',c:'var(--g-fatal)'},
+];
+const vtMeta = id => VISIT_TYPES.find(v=>v.id===id)||VISIT_TYPES[0];
+const ocMeta = id => OUTCOMES.find(o=>o.id===id)||OUTCOMES[0];
+const sMeta = id => STATUS.find(s=>s.id===id)||STATUS[0];
+const pMeta = id => PRIORITY.find(p=>p.id===id)||PRIORITY[1];
+const fmt = d => d? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'—';
+const fmtT = d => new Date(d).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const today = () => new Date().toISOString().slice(0,10);
+const montaUrl = sn => 'https://control-v2.monta.app/charging-stations/'+sn;
+const openMonta = sn => window.open(montaUrl(sn),'_blank','noopener');
+
+const Badge = ({c,children}) => <span className="badge"><span className="dot" style={{background:c}}></span>{children}</span>;
+
+/* ---------- seed demo data ---------- */
+/* ---------- Supabase connection ---------- */
+const SB_KEY='lewden_sb_cfg';
+const getCfg=()=>{try{return JSON.parse(localStorage.getItem(SB_KEY)||'null')}catch(e){return null}};
+const saveCfg=c=>{try{localStorage.setItem(SB_KEY,JSON.stringify(c))}catch(e){}};
+const clearCfg=()=>{try{localStorage.removeItem(SB_KEY)}catch(e){}};
+const ts=v=>v?Date.parse(v):0;
+const initials=n=>(n||'?').trim().slice(0,2).toUpperCase();
+
+async function loadAll(client){
+  const R=await Promise.all([
+    client.from('profiles').select('*'),
+    client.from('error_codes').select('*'),
+    client.from('chargers').select('*').order('serial_number'),
+    client.from('customers').select('*'),
+    client.from('customer_chargers').select('*'),
+    client.from('tickets').select('*'),
+    client.from('ticket_updates').select('*'),
+    client.from('charger_notes').select('*'),
+    client.from('visits').select('*'),
+    client.from('visit_records').select('*'),
+    client.from('tasks').select('*'),
+    client.from('personal_notes').select('*'),
+    client.from('user_settings').select('*').maybeSingle(),
+    client.auth.getUser(),
+  ]);
+  const e=R.find(r=>r&&r.error&&r.error.message);
+  if(e) throw new Error(e.error.message);
+  const [pf,ec,ch,cu,lk,tk,tu,cn,vi,vr,ta,pn,us,au]=R;
+  const team=(pf.data||[]).map(p=>({id:p.id,name:p.full_name||p.email||'User',initials:initials(p.full_name||p.email)}));
+  const uid0=au.data&&au.data.user&&au.data.user.id;
+  let me=team.find(t=>t.id===uid0);
+  if(!me&&uid0){const em=au.data.user.email||'You';me={id:uid0,name:em,initials:initials(em)};}
+  const recByVisit={};(vr.data||[]).forEach(r=>{(recByVisit[r.visit_id]=recByVisit[r.visit_id]||[]).push({...r,created_at:ts(r.created_at)})});
+  Object.values(recByVisit).forEach(a=>a.sort((x,y)=>x.created_at-y.created_at));
+  const data={
+    chargers:(ch.data||[]),
+    codes:(ec.data||[]),
+    cust:(cu.data||[]),
+    links:(lk.data||[]).map(l=>({customer_id:l.customer_id,charger_id:l.charger_id})),
+    tickets:(tk.data||[]).map(t=>({...t,created_at:ts(t.created_at),updated_at:ts(t.updated_at)})),
+    ticketUpdates:(tu.data||[]).map(u=>({...u,created_at:ts(u.created_at)})),
+    chargerNotes:(cn.data||[]).map(n=>({...n,created_at:ts(n.created_at)})),
+    tasks:(ta.data||[]).map(t=>({...t,created_at:ts(t.created_at)})),
+    notes:(pn.data||[]).map(n=>({...n,updated_at:ts(n.updated_at)})),
+    visits:(vi.data||[]).map(v=>({...v,customer_ids:v.customer_ids||[],charger_ids:v.charger_ids||[],attended_by:v.attended_by||[],records:recByVisit[v.id]||[],created_at:ts(v.created_at),updated_at:ts(v.updated_at)})),
+    team,
+  };
+  return {data,me,settings:us.data||null};
+}
+
+/* ---------- auth / connection screens ---------- */
+function SplashScreen({text}){return <div className="authwrap"><div className="glass pad" style={{textAlign:'center',maxWidth:340,width:'100%'}}>
+  <div className="logo" style={{margin:'0 auto 14px',display:'grid',placeItems:'center',background:'linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000))'}}><Icon n="bolt" style={{color:'#fff',width:22,height:22}}/></div>
+  <div style={{fontWeight:720,fontSize:16}}>Lewden Support Hub</div>
+  <div style={{color:'var(--ink3)',marginTop:8,fontSize:13}}>{text}</div></div></div>;}
+
+function SetupScreen({onSave}){
+  const [url,setUrl]=useState('');const [key,setKey]=useState('');
+  const ok=url.trim().startsWith('http')&&key.trim().length>20;
+  return <div className="authwrap"><div className="glass pad" style={{maxWidth:440,width:'100%'}}>
+    <div className="logo" style={{marginBottom:14,display:'grid',placeItems:'center',background:'linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000))'}}><Icon n="bolt" style={{color:'#fff',width:22,height:22}}/></div>
+    <h2 style={{margin:'0 0 4px'}}>Connect your database</h2>
+    <p style={{color:'var(--ink3)',fontSize:13,marginTop:0,lineHeight:1.5}}>Paste your Supabase Project URL and anon public key (Supabase → Project Settings → API). Stored only in this browser.</p>
+    <Field label="Project URL"><input className="inp" value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxxxx.supabase.co"/></Field>
+    <Field label="Anon public key"><input className="inp" value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGciOiJI…"/></Field>
+    <button className="btn pri" style={{width:'100%'}} disabled={!ok} onClick={()=>onSave({url:url.trim(),key:key.trim()})}>Connect</button>
+  </div></div>;
+}
+
+function LoginScreen({client,onReset}){
+  const [email,setEmail]=useState('');const [pw,setPw]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+  const login=async()=>{if(busy)return;setBusy(true);setErr('');
+    const {error}=await client.auth.signInWithPassword({email:email.trim(),password:pw});
+    if(error){setErr(error.message);setBusy(false);}};
+  return <div className="authwrap"><div className="glass pad" style={{maxWidth:400,width:'100%'}}>
+    <div className="logo" style={{marginBottom:14,display:'grid',placeItems:'center',background:'linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000))'}}><Icon n="bolt" style={{color:'#fff',width:22,height:22}}/></div>
+    <h2 style={{margin:'0 0 2px'}}>Sign in</h2>
+    <p style={{color:'var(--ink3)',fontSize:13,marginTop:0}}>Lewden Support Hub</p>
+    <Field label="Email"><input className="inp" type="email" autoFocus value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
+    <Field label="Password"><input className="inp" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
+    {err&&<div style={{color:'var(--g-fatal)',fontSize:13,marginBottom:10}}>{err}</div>}
+    <button className="btn pri" style={{width:'100%'}} disabled={busy} onClick={login}>{busy?'Signing in…':'Sign in'}</button>
+    <button className="btn" style={{width:'100%',marginTop:8}} onClick={onReset}>Change database connection</button>
+  </div></div>;
+}
+
+function ErrorScreen({msg,onReset}){return <div className="authwrap"><div className="glass pad" style={{maxWidth:430,width:'100%'}}>
+  <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}><Icon n="alert" style={{width:22,height:22,color:'var(--g-fatal)'}}/><h2 style={{margin:0}}>Connection problem</h2></div>
+  <p style={{color:'var(--ink2)',fontSize:13.5,lineHeight:1.5}}>{msg}</p>
+  <p style={{color:'var(--ink3)',fontSize:12.5,lineHeight:1.5}}>Check the URL and anon key, and that schema.sql has been run in Supabase.</p>
+  <button className="btn" style={{width:'100%'}} onClick={onReset}>Reset connection</button>
+</div></div>;}
+
+/* ---------- small reusable ---------- */
+function Modal({title,icon,onClose,children,footer}){
+  useEffect(()=>{const h=e=>e.key==='Escape'&&onClose();window.addEventListener('keydown',h);return()=>window.removeEventListener('keydown',h)},[]);
+  return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}>
+    <div className="modal glass">
+      <div className="hd"><Icon n={icon||'note'} style={{width:20,height:20,color:'var(--accent)'}}/><h2>{title}</h2>
+        <button className="iconbtn" style={{marginLeft:'auto'}} onClick={onClose}><Icon n="x"/></button></div>
+      <div className="bd">{children}</div>
+      {footer&&<div className="ft">{footer}</div>}
+    </div></div>;
+}
+const Field = ({label,children}) => <label className="f"><span className="lab">{label}</span>{children}</label>;
+function Empty({icon,title,sub}){return <div className="empty"><Icon n={icon||'note'}/><div style={{fontWeight:650,color:'var(--ink2)'}}>{title}</div>{sub&&<div style={{marginTop:4}}>{sub}</div>}</div>;}
+
+/* Typeahead serial picker — type what the customer reads out, pick from suggestions */
+function ChargerCombobox({api,value,onSelect,placeholder,allowClear=true}){
+  const {S}=api;const [q,setQ]=useState('');
+  const selected = value? S.chargers.find(c=>c.id===value):null;
+  const matches = useMemo(()=>{
+    const t=q.trim().toLowerCase(); if(!t) return [];
+    const k=t.split(/\s+/);
+    return S.chargers.filter(c=>k.every(w=>(c.serial_number+' '+c.model_no+' '+(c.charger_information||'')+' '+(c.notes||'')).toLowerCase().includes(w))).slice(0,8);
+  },[q,S.chargers]);
+  if(selected) return <div className="linkrow" style={{margin:0}}>
+    <Icon n="charger" style={{width:18,height:18,color:'var(--accent2)'}}/>
+    <div className="grow"><div className="mono" style={{fontWeight:600,fontSize:13.5}}>{selected.serial_number}</div>
+      <div style={{fontSize:12,color:'var(--ink3)'}}>{selected.model_no} · {selected.charger_information}</div></div>
+    {allowClear&&<button className="iconbtn" style={{width:30,height:30}} onClick={()=>onSelect(null)}><Icon n="x"/></button>}</div>;
+  return <div>
+    <div className="search"><Icon n="search"/><input value={q} onChange={e=>setQ(e.target.value)}
+      placeholder={placeholder||'Type the serial the customer reads out…'} inputMode="numeric"/></div>
+    {q.trim()&&<div className="combo">{matches.length?matches.map(c=><div key={c.id} className="comboitem" onClick={()=>{onSelect(c.id);setQ('')}}>
+      <span className="mono" style={{fontWeight:600,fontSize:13.5}}>{c.serial_number}</span>
+      <span className="mt">{c.model_no} · {c.charger_information}{c.notes?' · '+c.notes:''}</span></div>)
+      :<div className="comboitem" style={{color:'var(--ink3)',cursor:'default'}}>No charger matches “{q}”.</div>}</div>}
+  </div>;
+}
+
+/* ============================================================ APP */
+function App(){
+  const [cfg,setCfg]=useState(getCfg);
+  const [client,setClient]=useState(null);
+  const [session,setSession]=useState(undefined);
+  const [phase,setPhase]=useState('boot');
+  const [err,setErr]=useState('');
+  const [toast,setToast]=useState('');
+  const [theme,setTheme]=useState('dark');
+  const [accent,setAccent]=useState('#209f95');
+  const [compact,setCompact]=useState(false);
+  const [motion,setMotion]=useState(true);
+  const [defs,setDefs]=useState({priority:'medium',status:'new'});
+  const [layout,setLayout]=useState(['stat-open','stat-follow','stat-tasks','stat-chargers','quick','recent','attention']);
+  const [route,setRoute]=useState({page:'dash'});
+  const [S,setS]=useState({chargers:[],codes:[],cust:[],links:[],tickets:[],ticketUpdates:[],chargerNotes:[],tasks:[],notes:[],visits:[],team:[]});
+  const [me,setMe]=useState(null);
+  const [setLoaded,setSetLoaded]=useState(false);
+  const [modal,setModal]=useState(null);
+
+  useEffect(()=>{document.body.setAttribute('data-theme',theme)},[theme]);
+  useEffect(()=>{document.documentElement.style.setProperty('--accent',accent)},[accent]);
+  useEffect(()=>{document.body.setAttribute('data-density',compact?'compact':'normal')},[compact]);
+  useEffect(()=>{document.body.setAttribute('data-motion',motion?'on':'off')},[motion]);
+
+  const fail=e=>{const m=(e&&e.message)||String(e);console.error(e);setToast(m);setTimeout(()=>setToast(''),4500);};
+  const nowISO=()=>new Date().toISOString();
+
+  // init client from saved config
+  useEffect(()=>{
+    if(!cfg){setPhase('setup');return;}
+    if(!window.supabase||!window.supabase.createClient){setErr('Could not load the Supabase library — check your internet connection.');setPhase('error');return;}
+    let c;try{c=window.supabase.createClient(cfg.url,cfg.key);}catch(e){setErr('That Supabase URL or key looks invalid.');setPhase('error');return;}
+    setClient(c);
+    c.auth.getSession().then(({data})=>setSession(data.session||null));
+    const r=c.auth.onAuthStateChange((_e,s)=>setSession(s||null));
+    const sub=r&&r.data&&r.data.subscription;
+    return ()=>{if(sub&&sub.unsubscribe)sub.unsubscribe();};
+  },[cfg]);
+
+  // load data once authenticated
+  useEffect(()=>{
+    if(!client||session===undefined) return;
+    if(!session){setPhase('login');return;}
+    setPhase('loading');
+    loadAll(client).then(({data,me,settings})=>{
+      setS(data);setMe(me);
+      if(settings){
+        if(settings.theme)setTheme(settings.theme);
+        if(settings.accent)setAccent(settings.accent);
+        setCompact(!!settings.compact);setMotion(settings.motion!==false);
+        if(settings.defs)setDefs(settings.defs);
+        if(Array.isArray(settings.layout))setLayout(settings.layout);
+      }
+      setSetLoaded(true);setPhase('ready');
+    }).catch(e=>{setErr((e&&e.message)||String(e));setPhase('error');});
+  },[client,session]);
+
+  // persist personal settings (debounced)
+  useEffect(()=>{
+    if(phase!=='ready'||!client||!me||!setLoaded) return;
+    const t=setTimeout(()=>{
+      client.from('user_settings').upsert({user_id:me.id,theme,accent,compact,motion,defs,layout,updated_at:nowISO()}).then(({error})=>error&&console.error(error));
+    },450);
+    return ()=>clearTimeout(t);
+  },[theme,accent,compact,motion,defs,layout,phase,setLoaded]);
+
+  const go=(page,params={})=>setRoute({page,...params});
+  const signOut=()=>client&&client.auth.signOut();
+  const disconnect=()=>{clearCfg();window.location.reload();};
+
+  // derived
+  const openTickets=S.tickets.filter(t=>!['solved','closed'].includes(t.status));
+  const followsDue=S.tickets.filter(t=>t.follow_up&&t.follow_up<=today()&&!['solved','closed'].includes(t.status));
+  const myTasksDue=S.tasks.filter(t=>me&&t.user_id===me.id&&!t.done&&t.due&&t.due<=today());
+
+  // mutations (optimistic local + write-through to Supabase)
+  const addTicket=async d=>{const id=uid();
+    const row={id,customer_id:d.customer_id||null,charger_id:d.charger_id||null,title:d.title,description:d.description||null,status:d.status,priority:d.priority,fault:d.fault||null,assigned_to:d.assigned_to||me.id,follow_up:d.follow_up||null,created_by:me.id};
+    const {data,error}=await client.from('tickets').insert(row).select().single();
+    if(error){fail(error);return null;}
+    const t={...data,created_at:ts(data.created_at),updated_at:ts(data.updated_at)};
+    setS(s=>({...s,tickets:[t,...s.tickets]}));return t;};
+  const updTicket=(id,d)=>{setS(s=>({...s,tickets:s.tickets.map(t=>t.id===id?{...t,...d,updated_at:Date.now()}:t)}));
+    client.from('tickets').update({...d}).eq('id',id).then(({error})=>error&&fail(error));};
+  const addTUpdate=(ticket_id,body)=>{const id=uid();
+    setS(s=>({...s,ticketUpdates:[...s.ticketUpdates,{id,ticket_id,author:me.id,body,created_at:Date.now()}],tickets:s.tickets.map(t=>t.id===ticket_id?{...t,updated_at:Date.now()}:t)}));
+    client.from('ticket_updates').insert({id,ticket_id,author:me.id,body}).then(({error})=>error&&fail(error));
+    client.from('tickets').update({updated_at:nowISO()}).eq('id',ticket_id).then(()=>{});};
+  const addCustomer=async d=>{const id=uid();
+    const row={id,name:d.name,company:d.company||null,contact:d.contact||null,phone:d.phone||null,email:d.email||null,address:d.address||null,installer:d.installer||null,notes:d.notes||null,created_by:me.id};
+    const {data,error}=await client.from('customers').insert(row).select().single();
+    if(error){fail(error);return null;}
+    setS(s=>({...s,cust:[data,...s.cust]}));return data;};
+  const updCustomer=(id,d)=>{const {id:_i,created_at:_c,created_by:_b,updated_at:_u,...clean}=d;
+    setS(s=>({...s,cust:s.cust.map(c=>c.id===id?{...c,...clean}:c)}));
+    client.from('customers').update(clean).eq('id',id).then(({error})=>error&&fail(error));};
+  const linkCharger=(customer_id,charger_id)=>{setS(s=>s.links.some(l=>l.customer_id===customer_id&&l.charger_id===charger_id)?s:({...s,links:[...s.links,{customer_id,charger_id}]}));
+    client.from('customer_chargers').upsert({customer_id,charger_id}).then(({error})=>error&&fail(error));};
+  const unlinkCharger=(customer_id,charger_id)=>{setS(s=>({...s,links:s.links.filter(l=>!(l.customer_id===customer_id&&l.charger_id===charger_id))}));
+    client.from('customer_chargers').delete().eq('customer_id',customer_id).eq('charger_id',charger_id).then(({error})=>error&&fail(error));};
+  const updCharger=(id,d)=>{setS(s=>({...s,chargers:s.chargers.map(c=>c.id===id?{...c,...d}:c)}));
+    client.from('chargers').update({...d}).eq('id',id).then(({error})=>error&&fail(error));};
+  const addChargerNote=(charger_id,body)=>{const id=uid();
+    setS(s=>({...s,chargerNotes:[...s.chargerNotes,{id,charger_id,author:me.id,body,created_at:Date.now()}]}));
+    client.from('charger_notes').insert({id,charger_id,author:me.id,body}).then(({error})=>error&&fail(error));};
+  const addTask=d=>{const id=uid();const row={id,user_id:me.id,title:d.title,details:d.details||null,due:d.due||null,priority:d.priority||'medium',done:false};
+    setS(s=>({...s,tasks:[{...row,created_at:Date.now()},...s.tasks]}));
+    client.from('tasks').insert(row).then(({error})=>error&&fail(error));};
+  const toggleTask=id=>{const cur=S.tasks.find(t=>t.id===id);if(!cur)return;const nv=!cur.done;
+    setS(s=>({...s,tasks:s.tasks.map(t=>t.id===id?{...t,done:nv}:t)}));
+    client.from('tasks').update({done:nv}).eq('id',id).then(({error})=>error&&fail(error));};
+  const delTask=id=>{setS(s=>({...s,tasks:s.tasks.filter(t=>t.id!==id)}));
+    client.from('tasks').delete().eq('id',id).then(({error})=>error&&fail(error));};
+  const addNote=d=>{const id=uid();const row={id,user_id:me.id,title:d.title||null,body:d.body||null,pinned:false};
+    setS(s=>({...s,notes:[{...row,updated_at:Date.now()},...s.notes]}));
+    client.from('personal_notes').insert(row).then(({error})=>error&&fail(error));};
+  const updNote=(id,d)=>{setS(s=>({...s,notes:s.notes.map(n=>n.id===id?{...n,...d,updated_at:Date.now()}:n)}));
+    client.from('personal_notes').update({...d,updated_at:nowISO()}).eq('id',id).then(({error})=>error&&fail(error));};
+  const delNote=id=>{setS(s=>({...s,notes:s.notes.filter(n=>n.id!==id)}));
+    client.from('personal_notes').delete().eq('id',id).then(({error})=>error&&fail(error));};
+  const addVisit=async d=>{const id=uid();
+    const row={id,date:d.date||null,type:d.type,customer_ids:d.customer_ids,charger_ids:d.charger_ids,attended_by:d.attended_by,summary:d.summary||null,status:d.status,created_by:me.id};
+    const {data,error}=await client.from('visits').insert(row).select().single();
+    if(error){fail(error);return null;}
+    let saved=[];const recs=d.records||[];
+    if(recs.length){const rows=recs.map(r=>({id:r.id||uid(),visit_id:id,charger_id:r.charger_id||null,issue:r.issue||null,resolution:r.resolution||null,parts:r.parts||null,outcome:r.outcome||'resolved'}));
+      const {data:rd,error:re}=await client.from('visit_records').insert(rows).select();
+      if(re)fail(re);else saved=(rd||[]).map(r=>({...r,created_at:ts(r.created_at)}));}
+    const v={...data,customer_ids:data.customer_ids||[],charger_ids:data.charger_ids||[],attended_by:data.attended_by||[],records:saved,created_at:ts(data.created_at),updated_at:ts(data.updated_at)};
+    setS(s=>({...s,visits:[v,...s.visits]}));return v;};
+  const updVisit=(id,d)=>{setS(s=>({...s,visits:s.visits.map(v=>v.id===id?{...v,...d,updated_at:Date.now()}:v)}));
+    client.from('visits').update({...d}).eq('id',id).then(({error})=>error&&fail(error));};
+  const addVisitRecord=(id,r)=>{const rid=uid();const row={id:rid,visit_id:id,charger_id:r.charger_id||null,issue:r.issue||null,resolution:r.resolution||null,parts:r.parts||null,outcome:r.outcome||'resolved'};
+    setS(s=>({...s,visits:s.visits.map(v=>v.id===id?{...v,records:[...v.records,{...row,created_at:Date.now()}],updated_at:Date.now()}:v)}));
+    client.from('visit_records').insert(row).then(({error})=>error&&fail(error));};
+  const delVisitRecord=(id,rid)=>{setS(s=>({...s,visits:s.visits.map(v=>v.id===id?{...v,records:v.records.filter(r=>r.id!==rid)}:v)}));
+    client.from('visit_records').delete().eq('id',rid).then(({error})=>error&&fail(error));};
+
+  // ---- connection / auth gating ----
+  if(phase==='setup') return <SetupScreen onSave={c=>{saveCfg(c);setCfg(c);setPhase('boot');}}/>;
+  if(phase==='error') return <ErrorScreen msg={err} onReset={()=>{clearCfg();setCfg(null);setErr('');setClient(null);setSession(undefined);setPhase('setup');}}/>;
+  if(phase==='login') return <LoginScreen client={client} onReset={()=>{clearCfg();setCfg(null);setClient(null);setSession(undefined);setPhase('setup');}}/>;
+  if(phase!=='ready'||!me) return <SplashScreen text={phase==='loading'?'Loading your workspace…':'Starting…'}/>;
+
+  const api={S,me,go,modal,setModal,defs,layout,setLayout,cfg,signOut,disconnect,addTicket,updTicket,addTUpdate,addCustomer,updCustomer,linkCharger,unlinkCharger,updCharger,addChargerNote,addTask,toggleTask,delTask,addNote,updNote,delNote,addVisit,updVisit,addVisitRecord,delVisitRecord};
+
+  const NAV=[
+    {id:'dash',label:'Dashboard',short:'Home',icon:'grid'},
+    {id:'tickets',label:'Tickets',short:'Tickets',icon:'ticket',count:openTickets.length},
+    {id:'customers',label:'Customers',short:'People',icon:'users'},
+    {id:'chargers',label:'Chargers',short:'Chargers',icon:'charger'},
+    {id:'visits',label:'Site Visits',short:'Visits',icon:'clipboard'},
+    {id:'workspace',label:'My workspace',short:'Tasks',icon:'check',count:myTasksDue.length||undefined},
+    {id:'faults',label:'Fault codes',short:'Faults',icon:'alert'},
+    {id:'settings',label:'Settings',short:'Settings',icon:'cog'},
+  ];
+  const MOBNAV=NAV;
+  const titles={dash:['Dashboard','Your support overview'],tickets:['Tickets','Support queue \u2013 shared'],customers:['Customers','Profiles & history'],chargers:['Chargers','Serial database'],visits:['Site Visits','Callouts & maintenance logs'],workspace:['My workspace','Private to you'],faults:['Fault codes','Siena manufacturer reference'],settings:['Settings','']};
+  const [tt,ts0]=titles[route.page]||['',''];
+
+  let body;
+  if(route.page==='dash') body=<Dashboard api={api} open={openTickets} follows={followsDue} tasks={myTasksDue}/>;
+  else if(route.page==='tickets') body=<Tickets api={api}/>;
+  else if(route.page==='ticket') body=<TicketDetail api={api} id={route.id}/>;
+  else if(route.page==='customers') body=<Customers api={api}/>;
+  else if(route.page==='customer') body=<CustomerDetail api={api} id={route.id}/>;
+  else if(route.page==='chargers') body=<Chargers api={api}/>;
+  else if(route.page==='charger') body=<ChargerDetail api={api} id={route.id}/>;
+  else if(route.page==='visits') body=<Visits api={api}/>;
+  else if(route.page==='visit') body=<VisitDetail api={api} id={route.id}/>;
+  else if(route.page==='workspace') body=<Workspace api={api}/>;
+  else if(route.page==='faults') body=<Faults api={api}/>;
+  else if(route.page==='settings') body=<Settings theme={theme} setTheme={setTheme} accent={accent} setAccent={setAccent} compact={compact} setCompact={setCompact} motion={motion} setMotion={setMotion} defs={defs} setDefs={setDefs} api={api}/>;
+
+  const rootPage=['dash','tickets','customers','chargers','visits','workspace','faults','settings'].includes(route.page)?route.page:({ticket:'tickets',customer:'customers',charger:'chargers',visit:'visits'})[route.page];
+
+  return <div className="app">
+    <aside className="rail glass" style={{borderRadius:0,borderTop:0,borderBottom:0,borderLeft:0}}>
+      <div className="brand"><div className="logo"><Icon n="bolt" style={{color:'#fff'}}/></div>
+        <div><div className="t">Lewden Support</div><div className="s">EVSE engineer hub</div></div></div>
+      <nav className="nav">{NAV.map(n=><button key={n.id} className={rootPage===n.id?'on':''} onClick={()=>go(n.id)}>
+        <Icon n={n.icon}/>{n.label}{n.count?<span className="count">{n.count}</span>:null}</button>)}</nav>
+      <div className="me"><div className="avatar">{me.initials}</div>
+        <div style={{minWidth:0}}><div style={{fontSize:13,fontWeight:650,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{me.name}</div>
+        <div style={{fontSize:11,color:'var(--ink3)'}}>Signed in</div></div></div>
+    </aside>
+
+    <main className="main">
+      <header className="topbar">
+        {!['dash','tickets','customers','chargers','visits','workspace','faults','settings'].includes(route.page)&&
+          <button className="iconbtn" onClick={()=>go(rootPage)}><Icon n="back"/></button>}
+        <div><h1>{tt}</h1>{ts0&&<div className="sub">{ts0}</div>}</div>
+        <div className="sp"></div>
+        {route.page==='tickets'&&<button className="btn pri" onClick={()=>setModal({type:'ticket'})}><Icon n="plus"/>New ticket</button>}
+        {route.page==='customers'&&<button className="btn pri" onClick={()=>setModal({type:'customer'})}><Icon n="plus"/>New customer</button>}
+        {route.page==='visits'&&<button className="btn pri" onClick={()=>setModal({type:'visit'})}><Icon n="plus"/>Log visit</button>}
+      </header>
+      <div className="scroll"><div className="page" key={route.page+(route.id||'')}>{body}</div></div>
+    </main>
+
+    <nav className="tabbar">{MOBNAV.map(n=><button key={n.id} className={rootPage===n.id?'on':''} onClick={()=>go(n.id)}><Icon n={n.icon}/>{n.short}</button>)}</nav>
+    <button className="fab" onClick={()=>setModal({type:'ticket'})}><Icon n="plus"/></button>
+
+    {modal?.type==='ticket'&&<TicketForm api={api} init={modal.init} onClose={()=>setModal(null)}/>}
+    {modal?.type==='customer'&&<CustomerForm api={api} init={modal.init} onClose={()=>setModal(null)}/>}
+    {modal?.type==='task'&&<TaskForm api={api} onClose={()=>setModal(null)}/>}
+    {modal?.type==='note'&&<NoteForm api={api} init={modal.init} onClose={()=>setModal(null)}/>}
+    {modal?.type==='link'&&<LinkChargerModal api={api} customer_id={modal.customer_id} onClose={()=>setModal(null)}/>}
+    {modal?.type==='visit'&&<VisitForm api={api} onClose={()=>setModal(null)}/>}
+    {toast&&<div className="toast">{toast}</div>}
+  </div>;
+}
+
+/* ---------- Dashboard ---------- */
+function Dashboard({api,open,follows,tasks}){
+  const {S,go,setModal,layout,setLayout}=api;
+  const [editing,setEditing]=useState(false);
+  const dragI=useRef(null);
+  const recent=[...S.tickets].sort((a,b)=>b.updated_at-a.updated_at).slice(0,5);
+  const custName=id=>S.cust.find(c=>c.id===id)?.name||'No customer';
+
+  const onDrop=i=>{const from=dragI.current;dragI.current=null;
+    if(from==null||from===i)return;
+    setLayout(l=>{const a=[...l];const[m]=a.splice(from,1);a.splice(i,0,m);return a});};
+  const [over,setOver]=useState(null);
+
+  const StatCard=(k,v,d,ic,c)=><div className="glass stat"><div className="statrow"><div className="k"><Icon n={ic} style={{width:14,height:14,color:c}}/>{k}</div>
+    <div className="ic" style={{background:'color-mix(in srgb,'+c+' 18%,transparent)',color:c}}><Icon n={ic}/></div></div>
+    <div className="v">{v}</div><div className="d">{d}</div></div>;
+
+  const WIDGETS={
+    'stat-open':{span:'sp1',el:StatCard('Open tickets',open.length,'in the queue','ticket','var(--accent)')},
+    'stat-follow':{span:'sp1',el:StatCard('Follow-ups due',follows.length,'today or overdue','clock','var(--s-follow)')},
+    'stat-tasks':{span:'sp1',el:StatCard('Tasks due',tasks.length,'on your list','check','var(--s-await)')},
+    'stat-chargers':{span:'sp1',el:StatCard('Chargers',S.chargers.length,'in database','charger','var(--accent2)')},
+    'quick':{span:'sp4',el:<div className="glass pad"><div style={{fontWeight:680,marginBottom:10}}>Quick actions</div>
+      <div className="wrapflex">
+        <button className="btn pri" onClick={()=>setModal({type:'ticket'})}><Icon n="plus"/>New ticket</button>
+        <button className="btn" onClick={()=>setModal({type:'task'})}><Icon n="check"/>Add task</button>
+        <button className="btn" onClick={()=>setModal({type:'customer'})}><Icon n="users"/>New customer</button>
+        <button className="btn" onClick={()=>go('chargers')}><Icon n="search"/>Find charger</button>
+      </div></div>},
+    'recent':{span:'sp2',el:<div className="glass">
+      <div style={{padding:'15px 18px 4px',fontWeight:680}}>Recent activity</div>
+      {recent.length?recent.map(t=><div key={t.id} className="row" onClick={()=>!editing&&go('ticket',{id:t.id})}>
+        <span className="mono" style={{fontSize:12,color:'var(--ink3)',flex:'0 0 64px'}}>{t.ref}</span>
+        <div className="grow"><div className="ttl">{t.title}</div><div className="meta">{custName(t.customer_id)} · {fmtT(t.updated_at)}</div></div>
+        <Badge c={sMeta(t.status).c}>{sMeta(t.status).label}</Badge></div>):<Empty icon="ticket" title="No tickets yet"/>}</div>},
+    'attention':{span:'sp2',el:<div className="glass">
+      <div style={{padding:'15px 18px 4px',fontWeight:680}}>Needs attention</div>
+      {follows.length||tasks.length?<div>
+        {follows.map(t=><div key={t.id} className="row" onClick={()=>!editing&&go('ticket',{id:t.id})}>
+          <Icon n="clock" style={{width:17,height:17,color:'var(--s-follow)'}}/>
+          <div className="grow"><div className="ttl">{t.title}</div><div className="meta">Follow-up · {fmt(t.follow_up)}</div></div></div>)}
+        {tasks.map(t=><div key={t.id} className="row" onClick={()=>!editing&&go('workspace')}>
+          <Icon n="check" style={{width:17,height:17,color:'var(--s-await)'}}/>
+          <div className="grow"><div className="ttl">{t.title}</div><div className="meta">Task due · {fmt(t.due)}</div></div></div>)}
+      </div>:<Empty icon="check" title="All clear" sub="Nothing due right now."/>}</div>},
+  };
+
+  return <div>
+    <div style={{display:'flex',alignItems:'center',marginBottom:14}}>
+      <div style={{fontSize:13,color:'var(--ink3)'}}>{editing?'Drag the cards to rearrange your dashboard.':''}</div>
+      <div className="sp" style={{flex:1}}></div>
+      {editing&&<button className="btn sm" style={{marginRight:8}} onClick={()=>setLayout(['stat-open','stat-follow','stat-tasks','stat-chargers','quick','recent','attention'])}>Reset</button>}
+      <button className={'btn sm'+(editing?' pri':'')} onClick={()=>setEditing(e=>!e)}>
+        <Icon n={editing?'check':'layout'}/>{editing?'Done':'Rearrange'}</button>
+    </div>
+    <div className={'dash'+(editing?' editing':'')}>
+      {layout.filter(k=>WIDGETS[k]).map((k,i)=>{const w=WIDGETS[k];
+        return <div key={k} className={'wcard '+w.span+(over===i&&editing?' drag':'')}
+          draggable={editing}
+          onDragStart={()=>{dragI.current=i}}
+          onDragEnter={()=>editing&&setOver(i)}
+          onDragOver={e=>{if(editing)e.preventDefault()}}
+          onDragEnd={()=>setOver(null)}
+          onDrop={()=>{onDrop(i);setOver(null)}}>
+          {editing&&<div className="grip"><Icon n="grip"/></div>}
+          {w.el}
+        </div>;})}
+    </div>
+  </div>;
+}
+
+/* ---------- Tickets ---------- */
+function Tickets({api}){
+  const {S,go}=api; const [q,setQ]=useState(''); const [f,setF]=useState('open');
+  const custName=id=>S.cust.find(c=>c.id===id)?.name||'No customer';
+  let list=[...S.tickets].sort((a,b)=>b.updated_at-a.updated_at);
+  if(f==='open') list=list.filter(t=>!['solved','closed'].includes(t.status));
+  else if(f!=='all') list=list.filter(t=>t.status===f);
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(t=>k.every(w=>(t.ref+' '+t.title+' '+custName(t.customer_id)+' '+(t.fault||'')).toLowerCase().includes(w)))}
+  return <div>
+    <div className="wrapflex" style={{marginBottom:14,alignItems:'center'}}>
+      <div className="search"><Icon n="search"/><input placeholder="Search ref, title, customer, fault…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    </div>
+    <div className="seg" style={{marginBottom:14}}>
+      {['open','all','ongoing','follow','solved'].map(x=><button key={x} className={f===x?'on':''} onClick={()=>setF(x)}>{x==='open'?'Open':x==='all'?'All':sMeta(x).label}</button>)}
+    </div>
+    <div className="glass">
+      {list.length?list.map(t=><div key={t.id} className="row" onClick={()=>go('ticket',{id:t.id})}>
+        <span className="mono" style={{fontSize:12,color:'var(--ink3)',flex:'0 0 66px'}}>{t.ref}</span>
+        <div className="grow"><div className="ttl">{t.title}</div>
+          <div className="meta">{custName(t.customer_id)} · updated {fmtT(t.updated_at)}{t.fault?' · '+t.fault:''}</div></div>
+        <span className="dot" style={{background:pMeta(t.priority).c,width:8,height:8}} title={pMeta(t.priority).label}></span>
+        <Badge c={sMeta(t.status).c}>{sMeta(t.status).label}</Badge></div>)
+        :<Empty icon="ticket" title="No tickets here" sub="Create one with the New ticket button."/>}
+    </div>
+  </div>;
+}
+
+function TicketForm({api,onClose,init}){
+  const {S,addTicket,addCustomer,linkCharger,go,setModal,defs}=api;
+  const [mode,setMode]=useState(init?.customer_id?'existing':'new'); // new | existing | none
+  const [d,setD]=useState({customer_id:init?.customer_id||'',charger_id:init?.charger_id||'',title:'',description:'',status:defs?.status||'new',priority:defs?.priority||'medium',fault:'',assigned_to:api.me.id,follow_up:''});
+  const [nc,setNc]=useState({name:'',company:'',phone:'',email:'',address:'',installer:'',notes:''});
+  const set=(k,v)=>setD(s=>({...s,[k]:v}));
+  const setN=(k,v)=>setNc(s=>({...s,[k]:v}));
+  const chargersFor = mode==='existing'&&d.customer_id? S.links.filter(l=>l.customer_id===d.customer_id).map(l=>S.chargers.find(c=>c.id===l.charger_id)).filter(Boolean) : S.chargers;
+  const save=async()=>{
+    if(!d.title.trim()) return;
+    let customer_id='';
+    if(mode==='new'){
+      if(!nc.name.trim()) return;
+      const c=await addCustomer(nc); if(!c) return; customer_id=c.id;
+      if(d.charger_id) linkCharger(c.id,d.charger_id);
+    } else if(mode==='existing'){
+      customer_id=d.customer_id;
+    }
+    const t=await addTicket({...d,customer_id});
+    if(!t) return;
+    onClose(); go('ticket',{id:t.id});
+  };
+  const seg=(v,l)=><button className={mode===v?'on':''} onClick={()=>setMode(v)}>{l}</button>;
+  return <Modal title="New ticket" icon="ticket" onClose={onClose}
+    footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn pri" onClick={save}>Create ticket</button></>}>
+    <div className="lab" style={{fontSize:12,fontWeight:640,color:'var(--ink2)',marginBottom:6}}>Caller</div>
+    <div className="seg" style={{marginBottom:14}}>{seg('new','New customer')}{seg('existing','Existing')}{seg('none','No customer')}</div>
+
+    {mode==='new'&&<div style={{padding:'2px 0 6px'}}>
+      <div className="grid cols-2">
+        <Field label="Name *"><input className="inp" autoFocus value={nc.name} onChange={e=>setN('name',e.target.value)} placeholder="Person or site name"/></Field>
+        <Field label="Phone"><input className="inp" value={nc.phone} onChange={e=>setN('phone',e.target.value)}/></Field>
+      </div>
+      <div className="grid cols-2">
+        <Field label="Email"><input className="inp" value={nc.email} onChange={e=>setN('email',e.target.value)}/></Field>
+        <Field label="Company"><input className="inp" value={nc.company} onChange={e=>setN('company',e.target.value)}/></Field>
+      </div>
+      <Field label="Address"><input className="inp" value={nc.address} onChange={e=>setN('address',e.target.value)}/></Field>
+    </div>}
+    {mode==='existing'&&<Field label="Customer"><select className="inp" autoFocus value={d.customer_id} onChange={e=>{set('customer_id',e.target.value);set('charger_id','')}}>
+      <option value="">— Select customer —</option>{S.cust.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>}
+
+    <Field label={mode==='existing'?'Charger on file':'Charger (serial)'}>
+      {mode==='existing'&&!d.charger_id&&chargersFor.length>0&&<div className="wrapflex" style={{marginBottom:8}}>
+        {chargersFor.map(c=><button key={c.id} className="chip" onClick={()=>set('charger_id',c.id)}>
+          <Icon n="charger" style={{width:13,height:13,color:'var(--accent2)'}}/><span className="mono">{c.serial_number}</span></button>)}</div>}
+      <ChargerCombobox api={api} value={d.charger_id} onSelect={id=>set('charger_id',id)}/>
+    </Field>
+
+    <hr style={{border:0,borderTop:'1px solid var(--hair)',margin:'4px 0 14px'}}/>
+    <Field label="Title *"><input className="inp" value={d.title} onChange={e=>set('title',e.target.value)} placeholder="Short summary of the issue"/></Field>
+    <Field label="Description"><textarea className="inp" value={d.description} onChange={e=>set('description',e.target.value)} placeholder="What did the customer report?"/></Field>
+    <div className="grid cols-2">
+      <Field label="Status"><select className="inp" value={d.status} onChange={e=>set('status',e.target.value)}>{STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Field>
+      <Field label="Priority"><select className="inp" value={d.priority} onChange={e=>set('priority',e.target.value)}>{PRIORITY.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></Field>
+    </div>
+    <div className="grid cols-2">
+      <Field label="Fault code"><select className="inp" value={d.fault} onChange={e=>set('fault',e.target.value)}>
+        <option value="">— None —</option>{S.codes.map(c=><option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}</select></Field>
+      <Field label="Follow-up date"><input type="date" className="inp" value={d.follow_up} onChange={e=>set('follow_up',e.target.value)}/></Field>
+    </div>
+  </Modal>;
+}
+
+function TicketDetail({api,id}){
+  const {S,go,updTicket,addTUpdate}=api;
+  const t=S.tickets.find(x=>x.id===id); if(!t)return <Empty icon="ticket" title="Ticket not found"/>;
+  const cust=S.cust.find(c=>c.id===t.customer_id);
+  const charger=S.chargers.find(c=>c.id===t.charger_id);
+  const ups=S.ticketUpdates.filter(u=>u.ticket_id===id).sort((a,b)=>b.created_at-a.created_at);
+  const code=S.codes.find(c=>c.code===t.fault);
+  const [body,setBody]=useState('');
+  const post=()=>{if(!body.trim())return;addTUpdate(id,body.trim());setBody('')};
+  const author=uid=>(api.S.team.find(u=>u.id===uid)?.name)||'—';
+  return <div className="grid cols-2" style={{alignItems:'start'}}>
+    <div className="glass pad">
+      <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+        <span className="mono" style={{color:'var(--ink3)'}}>{t.ref}</span>
+        <Badge c={pMeta(t.priority).c}>{pMeta(t.priority).label}</Badge>
+        {code&&<Badge c={GRADE_C[code.grade]}>{code.code}</Badge>}
+      </div>
+      <h2 style={{margin:'10px 0 6px',fontSize:21,fontWeight:720}}>{t.title}</h2>
+      <p style={{color:'var(--ink2)',fontSize:14.5,lineHeight:1.55,marginTop:0}}>{t.description||'No description.'}</p>
+      <div className="lab" style={{fontSize:12,fontWeight:640,color:'var(--ink2)',margin:'8px 0 7px'}}>Status</div>
+      <div className="wrapflex">{STATUS.map(s=><button key={s.id} className={'chip'} onClick={()=>updTicket(id,{status:s.id})}
+        style={t.status===s.id?{borderColor:s.c,color:s.c,background:'color-mix(in srgb,'+s.c+' 14%,transparent)'}:{}}>
+        <span className="dot" style={{background:s.c}}></span>{s.label}</button>)}</div>
+      <div style={{marginTop:14}}>
+        {cust&&<div className="kv"><span className="k">Customer</span><span className="v" style={{color:'var(--accent)',cursor:'pointer'}} onClick={()=>go('customer',{id:cust.id})}>{cust.name} ›</span></div>}
+        {cust&&<div className="kv"><span className="k">Phone</span><span className="v mono">{cust.phone||'—'}</span></div>}
+        {charger&&<div className="kv"><span className="k">Charger</span><span className="v mono" style={{color:'var(--accent)',cursor:'pointer'}} onClick={()=>go('charger',{id:charger.id})}>{charger.serial_number} ›</span></div>}
+        {charger&&<div className="kv"><span className="k">Model</span><span className="v">{charger.model_no} · {charger.charger_information}</span></div>}
+        {charger&&<div style={{marginTop:10}}><button className="btn sm" style={{width:'100%'}} onClick={()=>openMonta(charger.serial_number)}><Icon n="ext"/>Open this charger in Monta</button></div>}
+        <div className="kv"><span className="k">Follow-up</span><span className="v">{fmt(t.follow_up)}</span></div>
+        <div className="kv"><span className="k">Created</span><span className="v">{fmtT(t.created_at)}</span></div>
+      </div>
+      {code&&<div className="note" style={{marginTop:14}}><b>{code.name}</b> — {code.description}<div className="nm">Grade: {code.grade} · LED: {code.light_status}</div></div>}
+    </div>
+    <div className="glass pad">
+      <div style={{fontWeight:680,marginBottom:10}}>Work log</div>
+      <textarea className="inp" placeholder="Add an update or note for this ticket…" value={body} onChange={e=>setBody(e.target.value)}/>
+      <div style={{display:'flex',justifyContent:'flex-end',marginTop:8}}><button className="btn pri sm" onClick={post}><Icon n="plus"/>Add update</button></div>
+      <div className="timeline" style={{marginTop:14}}>
+        {ups.length?ups.map(u=><div key={u.id} className="tl"><div style={{fontSize:13.5,lineHeight:1.5}}>{u.body}</div>
+          <div className="nm" style={{fontSize:11,color:'var(--ink3)',marginTop:4}}>{author(u.author)} · {fmtT(u.created_at)}</div></div>)
+          :<Empty icon="note" title="No updates yet"/>}
+      </div>
+    </div>
+  </div>;
+}
+
+/* ---------- Customers ---------- */
+function Customers({api}){
+  const {S,go}=api;const [q,setQ]=useState('');
+  let list=S.cust;
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(c=>k.every(w=>(c.name+' '+c.company+' '+c.email+' '+c.phone+' '+c.address).toLowerCase().includes(w)))}
+  const cnt=id=>({t:S.tickets.filter(t=>t.customer_id===id).length,c:S.links.filter(l=>l.customer_id===id).length});
+  return <div>
+    <div className="search" style={{marginBottom:14}}><Icon n="search"/><input placeholder="Search customers…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <div className="glass">{list.length?list.map(c=>{const n=cnt(c.id);return <div key={c.id} className="row" onClick={()=>go('customer',{id:c.id})}>
+      <div className="avatar" style={{flex:'0 0 30px'}}>{c.name.slice(0,1)}</div>
+      <div className="grow"><div className="ttl">{c.name}</div><div className="meta">{c.address||c.email||'—'}</div></div>
+      <span className="chip">{n.t} ticket{n.t!==1?'s':''}</span><span className="chip">{n.c} charger{n.c!==1?'s':''}</span></div>})
+      :<Empty icon="users" title="No customers" sub="Add one with the New customer button."/>}</div>
+  </div>;
+}
+
+function CustomerForm({api,onClose,init}){
+  const {addCustomer,updCustomer,go}=api;const edit=!!init;
+  const [d,setD]=useState(init||{name:'',company:'',contact:'',phone:'',email:'',address:'',installer:'',notes:''});
+  const set=(k,v)=>setD(s=>({...s,[k]:v}));
+  const save=async()=>{if(!d.name.trim())return;if(edit){updCustomer(init.id,d);onClose()}else{const c=await addCustomer(d);if(!c)return;onClose();go('customer',{id:c.id})}};
+  return <Modal title={edit?'Edit customer':'New customer'} icon="users" onClose={onClose}
+    footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn pri" onClick={save}>{edit?'Save':'Create'}</button></>}>
+    <div className="grid cols-2"><Field label="Name *"><input className="inp" autoFocus value={d.name} onChange={e=>set('name',e.target.value)} placeholder="Person or site name"/></Field>
+      <Field label="Company"><input className="inp" value={d.company} onChange={e=>set('company',e.target.value)}/></Field></div>
+    <div className="grid cols-2"><Field label="Site contact"><input className="inp" value={d.contact} onChange={e=>set('contact',e.target.value)}/></Field>
+      <Field label="Phone"><input className="inp" value={d.phone} onChange={e=>set('phone',e.target.value)}/></Field></div>
+    <Field label="Email"><input className="inp" value={d.email} onChange={e=>set('email',e.target.value)}/></Field>
+    <Field label="Address"><textarea className="inp" style={{minHeight:60}} value={d.address} onChange={e=>set('address',e.target.value)}/></Field>
+    <Field label="Installer / electrician"><input className="inp" value={d.installer} onChange={e=>set('installer',e.target.value)}/></Field>
+    <Field label="Notes"><textarea className="inp" value={d.notes} onChange={e=>set('notes',e.target.value)}/></Field>
+  </Modal>;
+}
+
+function CustomerDetail({api,id}){
+  const {S,go,setModal,unlinkCharger}=api;
+  const c=S.cust.find(x=>x.id===id);if(!c)return <Empty icon="users" title="Customer not found"/>;
+  const tickets=S.tickets.filter(t=>t.customer_id===id).sort((a,b)=>b.updated_at-a.updated_at);
+  const chargers=S.links.filter(l=>l.customer_id===id).map(l=>S.chargers.find(ch=>ch.id===l.charger_id)).filter(Boolean);
+  return <div className="grid cols-2" style={{alignItems:'start'}}>
+    <div>
+      <div className="glass pad">
+        <div style={{display:'flex',alignItems:'center',gap:12}}>
+          <div className="avatar" style={{width:44,height:44,fontSize:17,flex:'0 0 44px'}}>{c.name.slice(0,1)}</div>
+          <div style={{flex:1}}><h2 style={{margin:0,fontSize:20,fontWeight:720}}>{c.name}</h2>{c.company&&<div style={{color:'var(--ink3)',fontSize:13}}>{c.company}</div>}</div>
+          <button className="iconbtn" onClick={()=>setModal({type:'customer',init:c})}><Icon n="edit"/></button>
+        </div>
+        <div style={{marginTop:12}}>
+          {c.contact&&<div className="kv"><span className="k">Site contact</span><span className="v">{c.contact}</span></div>}
+          <div className="kv"><span className="k"><Icon n="phone" style={{width:13,height:13,verticalAlign:'-2px'}}/> Phone</span><span className="v mono">{c.phone||'—'}</span></div>
+          <div className="kv"><span className="k"><Icon n="mail" style={{width:13,height:13,verticalAlign:'-2px'}}/> Email</span><span className="v">{c.email||'—'}</span></div>
+          <div className="kv"><span className="k"><Icon n="pin2" style={{width:13,height:13,verticalAlign:'-2px'}}/> Address</span><span className="v">{c.address||'—'}</span></div>
+          {c.installer&&<div className="kv"><span className="k">Installer</span><span className="v">{c.installer}</span></div>}
+        </div>
+        {c.notes&&<div className="note" style={{marginTop:12}}>{c.notes}</div>}
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{display:'flex',alignItems:'center'}}><div style={{fontWeight:680}}>Assigned chargers</div>
+          <button className="btn sm" style={{marginLeft:'auto'}} onClick={()=>setModal({type:'link',customer_id:id})}><Icon n="link"/>Link charger</button></div>
+        <div style={{marginTop:10}}>{chargers.length?chargers.map(ch=><div key={ch.id} className="linkrow">
+          <Icon n="charger" style={{width:18,height:18,color:'var(--accent2)'}}/>
+          <div className="grow" style={{cursor:'pointer'}} onClick={()=>go('charger',{id:ch.id})}>
+            <div className="mono" style={{fontWeight:600,fontSize:13.5}}>{ch.serial_number}</div>
+            <div style={{fontSize:12,color:'var(--ink3)'}}>{ch.model_no} · {ch.charger_information}</div></div>
+          <button className="iconbtn" style={{width:30,height:30}} onClick={()=>unlinkCharger(id,ch.id)}><Icon n="x"/></button></div>)
+          :<Empty icon="charger" title="No chargers linked"/>}</div>
+      </div>
+    </div>
+    <div className="glass pad">
+      <div style={{display:'flex',alignItems:'center'}}><div style={{fontWeight:680}}>Ticket history</div>
+        <button className="btn sm" style={{marginLeft:'auto'}} onClick={()=>setModal({type:'ticket',init:{customer_id:id}})}><Icon n="plus"/>New ticket</button></div>
+      <div style={{marginTop:6}}>{tickets.length?tickets.map(t=><div key={t.id} className="row" onClick={()=>go('ticket',{id:t.id})}>
+        <span className="mono" style={{fontSize:12,color:'var(--ink3)',flex:'0 0 64px'}}>{t.ref}</span>
+        <div className="grow"><div className="ttl">{t.title}</div><div className="meta">{fmtT(t.updated_at)}</div></div>
+        <Badge c={sMeta(t.status).c}>{sMeta(t.status).label}</Badge></div>)
+        :<Empty icon="ticket" title="No tickets yet" sub="Every call you log here builds their file."/>}</div>
+    </div>
+  </div>;
+}
+
+function LinkChargerModal({api,customer_id,onClose}){
+  const {S,linkCharger}=api;const [q,setQ]=useState('');
+  const linked=new Set(S.links.filter(l=>l.customer_id===customer_id).map(l=>l.charger_id));
+  let list=S.chargers.filter(c=>!linked.has(c.id));
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(c=>k.every(w=>(c.serial_number+' '+c.model_no+' '+(c.notes||'')).toLowerCase().includes(w)))}
+  list=list.slice(0,40);
+  return <Modal title="Link a charger" icon="link" onClose={onClose}>
+    <div className="search" style={{marginBottom:12}}><Icon n="search"/><input autoFocus placeholder="Search serial or model…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    {list.map(c=><div key={c.id} className="linkrow"><div className="grow"><div className="mono" style={{fontWeight:600,fontSize:13.5}}>{c.serial_number}</div>
+      <div style={{fontSize:12,color:'var(--ink3)'}}>{c.model_no} · {c.charger_information}</div></div>
+      <button className="btn sm pri" onClick={()=>{linkCharger(customer_id,c.id);onClose()}}>Link</button></div>)}
+    {!list.length&&<Empty icon="charger" title="No matches"/>}
+  </Modal>;
+}
+
+/* ---------- Chargers ---------- */
+function Chargers({api}){
+  const {S,go}=api;const [q,setQ]=useState('');
+  let list=S.chargers;
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(c=>k.every(w=>(c.serial_number+' '+c.model_no+' '+c.charger_information+' '+(c.firmware_version||'')+' '+(c.notes||'')).toLowerCase().includes(w)))}
+  const owners=id=>S.links.filter(l=>l.charger_id===id).length;
+  return <div>
+    <div className="search" style={{marginBottom:8}}><Icon n="search"/><input placeholder="Search serial, model, firmware, note…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <div style={{fontSize:12,color:'var(--ink3)',margin:'2px 4px 12px'}}>{list.length} of {S.chargers.length} chargers</div>
+    <div className="glass">{list.slice(0,200).map(c=><div key={c.id} className="row" onClick={()=>go('charger',{id:c.id})}>
+      <Icon n="charger" style={{width:18,height:18,color:'var(--accent2)',flex:'0 0 18px'}}/>
+      <div className="grow"><div className="ttl mono" style={{fontSize:13.5}}>{c.serial_number}</div>
+        <div className="meta">{c.model_no} · {c.charger_information}{c.firmware_version?' · '+c.firmware_version:''}</div></div>
+      {c.notes&&<span className="chip" style={{color:'var(--g-serious)'}}>{c.notes}</span>}
+      {owners(c.id)>0&&<span className="chip"><Icon n="users" style={{width:12,height:12}}/>{owners(c.id)}</span>}
+      <button className="iconbtn" style={{width:32,height:32}} title="Open in Monta Control" onClick={e=>{e.stopPropagation();openMonta(c.serial_number)}}><Icon n="ext"/></button></div>)}
+      {!list.length&&<Empty icon="charger" title="No matching chargers"/>}
+      {list.length>200&&<div style={{padding:12,textAlign:'center',color:'var(--ink3)',fontSize:12}}>Showing first 200 — refine your search.</div>}</div>
+  </div>;
+}
+
+function ChargerDetail({api,id}){
+  const {S,go,addChargerNote,updCharger}=api;
+  const c=S.chargers.find(x=>x.id===id);if(!c)return <Empty icon="charger" title="Charger not found"/>;
+  const owners=S.links.filter(l=>l.charger_id===id).map(l=>S.cust.find(x=>x.id===l.customer_id)).filter(Boolean);
+  const notes=S.chargerNotes.filter(n=>n.charger_id===id).sort((a,b)=>b.created_at-a.created_at);
+  const tickets=S.tickets.filter(t=>t.charger_id===id).sort((a,b)=>b.updated_at-a.updated_at);
+  const [body,setBody]=useState('');
+  const post=()=>{if(!body.trim())return;addChargerNote(id,body.trim());setBody('')};
+  const author=uid=>(api.S.team.find(u=>u.id===uid)?.name)||'—';
+  return <div className="grid cols-2" style={{alignItems:'start'}}>
+    <div>
+      <div className="glass pad">
+        <div style={{display:'flex',alignItems:'center',gap:10}}><Icon n="charger" style={{width:26,height:26,color:'var(--accent2)'}}/>
+          <div className="mono" style={{fontSize:19,fontWeight:700,flex:1,wordBreak:'break-all'}}>{c.serial_number}</div></div>
+        <button className="btn pri" style={{width:'100%',marginTop:12}} onClick={()=>openMonta(c.serial_number)}><Icon n="ext"/>Open in Monta Control</button>
+        <div style={{marginTop:12}}>
+          <div className="kv"><span className="k">Model</span><span className="v">{c.model_no}</span></div>
+          <div className="kv"><span className="k">Spec</span><span className="v">{c.charger_information}</span></div>
+          <div className="kv"><span className="k">Power</span><span className="v">{c.power} · {c.connector}</span></div>
+          <div className="kv"><span className="k">Firmware</span><span className="v mono">{c.firmware_version||'—'}</span></div>
+          <div className="kv"><span className="k">Batch</span><span className="v">{c.batch_no||'—'}</span></div>
+          <div className="kv"><span className="k">Manufactured</span><span className="v">{fmt(c.manufacture_date)}</span></div>
+          <div className="kv"><span className="k">Handshake pw</span><span className="v mono">{c.handshake_password||'—'}</span></div>
+          <div className="kv"><span className="k">Connect pw</span><span className="v mono">{c.lewden_connect_password||'—'}</span></div>
+          {c.notes&&<div className="kv"><span className="k">Factory note</span><span className="v" style={{color:'var(--g-serious)'}}>{c.notes}</span></div>}
+        </div>
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{fontWeight:680,marginBottom:8}}>Owners</div>
+        {owners.length?owners.map(o=><div key={o.id} className="linkrow"><div className="avatar" style={{flex:'0 0 30px'}}>{o.name.slice(0,1)}</div>
+          <div className="grow" style={{cursor:'pointer'}} onClick={()=>go('customer',{id:o.id})}><div style={{fontWeight:600,fontSize:13.5}}>{o.name}</div>
+            <div style={{fontSize:12,color:'var(--ink3)'}}>{o.phone||o.email||''}</div></div></div>)
+          :<Empty icon="users" title="Not assigned" sub="Link it from a customer profile."/>}
+      </div>
+    </div>
+    <div>
+      <div className="glass pad">
+        <div style={{fontWeight:680,marginBottom:8}}>Charger history</div>
+        <textarea className="inp" placeholder="Note about this unit (independent of any ticket)…" value={body} onChange={e=>setBody(e.target.value)}/>
+        <div style={{display:'flex',justifyContent:'flex-end',marginTop:8}}><button className="btn pri sm" onClick={post}><Icon n="plus"/>Add note</button></div>
+        <div style={{marginTop:12}}>{notes.length?notes.map(n=><div key={n.id} className="note">{n.body}<div className="nm">{author(n.author)} · {fmtT(n.created_at)}</div></div>)
+          :<Empty icon="note" title="No history notes yet"/>}</div>
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{fontWeight:680,marginBottom:6}}>Related tickets</div>
+        {tickets.length?tickets.map(t=><div key={t.id} className="row" onClick={()=>go('ticket',{id:t.id})}>
+          <span className="mono" style={{fontSize:12,color:'var(--ink3)',flex:'0 0 64px'}}>{t.ref}</span>
+          <div className="grow"><div className="ttl">{t.title}</div></div><Badge c={sMeta(t.status).c}>{sMeta(t.status).label}</Badge></div>)
+          :<Empty icon="ticket" title="No tickets reference this unit"/>}
+      </div>
+    </div>
+  </div>;
+}
+
+/* ---------- Workspace ---------- */
+function Workspace({api}){
+  const {S,me,setModal,toggleTask,delTask,updNote,delNote}=api;
+  const tasks=S.tasks.filter(t=>t.user_id===me.id);
+  const open=tasks.filter(t=>!t.done).sort((a,b)=>(a.due||'9')<(b.due||'9')?-1:1);
+  const done=tasks.filter(t=>t.done);
+  const notes=S.notes.filter(n=>n.user_id===me.id).sort((a,b)=>(b.pinned-a.pinned)||(b.updated_at-a.updated_at));
+  return <div className="grid cols-2" style={{alignItems:'start'}}>
+    <div className="glass pad">
+      <div style={{display:'flex',alignItems:'center'}}><div style={{fontWeight:680}}>Tasks & reminders</div>
+        <button className="btn sm pri" style={{marginLeft:'auto'}} onClick={()=>setModal({type:'task'})}><Icon n="plus"/>Add task</button></div>
+      <div style={{marginTop:10}}>{open.length?open.map(t=><div key={t.id} className="linkrow">
+        <input type="checkbox" className="check" checked={t.done} onChange={()=>toggleTask(t.id)}/>
+        <div className="grow"><div style={{fontWeight:600,fontSize:14}}>{t.title}</div>
+          <div style={{fontSize:12,color:'var(--ink3)',display:'flex',gap:8,marginTop:2,alignItems:'center'}}>
+            <span className="dot" style={{background:pMeta(t.priority).c}}></span>{pMeta(t.priority).label}
+            {t.due&&<span style={{color:t.due<=today()?'var(--g-fatal)':'var(--ink3)'}}>· due {fmt(t.due)}</span>}
+            {t.details&&<span>· {t.details}</span>}</div></div>
+        <button className="iconbtn" style={{width:30,height:30}} onClick={()=>delTask(t.id)}><Icon n="trash"/></button></div>)
+        :<Empty icon="check" title="Nothing on your list" sub="Add a reminder so it doesn't slip."/>}</div>
+      {done.length>0&&<><div className="sectitle" style={{margin:'16px 2px 8px'}}>Done</div>
+        {done.map(t=><div key={t.id} className="linkrow" style={{opacity:.55}}>
+          <input type="checkbox" className="check" checked onChange={()=>toggleTask(t.id)}/>
+          <div className="grow" style={{textDecoration:'line-through'}}>{t.title}</div>
+          <button className="iconbtn" style={{width:30,height:30}} onClick={()=>delTask(t.id)}><Icon n="trash"/></button></div>)}</>}
+    </div>
+    <div className="glass pad">
+      <div style={{display:'flex',alignItems:'center'}}><div style={{fontWeight:680}}>Notes</div>
+        <button className="btn sm pri" style={{marginLeft:'auto'}} onClick={()=>setModal({type:'note'})}><Icon n="plus"/>New note</button></div>
+      <div style={{marginTop:10}}>{notes.length?notes.map(n=><div key={n.id} className="note">
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{fontWeight:680,flex:1}}>{n.title||'Untitled'}</div>
+          <button className="iconbtn" style={{width:28,height:28}} onClick={()=>updNote(n.id,{pinned:!n.pinned})} title="Pin"><Icon n="pin" style={{color:n.pinned?'var(--accent)':'var(--ink3)'}}/></button>
+          <button className="iconbtn" style={{width:28,height:28}} onClick={()=>setModal({type:'note',init:n})}><Icon n="edit"/></button>
+          <button className="iconbtn" style={{width:28,height:28}} onClick={()=>delNote(n.id)}><Icon n="trash"/></button></div>
+        <div style={{marginTop:6,whiteSpace:'pre-wrap'}}>{n.body}</div>
+        <div className="nm">Updated {fmtT(n.updated_at)}</div></div>)
+        :<Empty icon="note" title="No notes yet" sub="Jot down fixes, snippets, anything useful."/>}</div>
+    </div>
+  </div>;
+}
+
+function TaskForm({api,onClose}){
+  const {addTask}=api;const [d,setD]=useState({title:'',details:'',due:'',priority:'medium'});
+  const set=(k,v)=>setD(s=>({...s,[k]:v}));
+  const save=()=>{if(!d.title.trim())return;addTask(d);onClose()};
+  return <Modal title="Add task" icon="check" onClose={onClose}
+    footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn pri" onClick={save}>Add</button></>}>
+    <Field label="Task *"><input className="inp" autoFocus value={d.title} onChange={e=>set('title',e.target.value)} placeholder="What needs doing?"/></Field>
+    <Field label="Details"><textarea className="inp" style={{minHeight:60}} value={d.details} onChange={e=>set('details',e.target.value)}/></Field>
+    <div className="grid cols-2"><Field label="Due date"><input type="date" className="inp" value={d.due} onChange={e=>set('due',e.target.value)}/></Field>
+      <Field label="Priority"><select className="inp" value={d.priority} onChange={e=>set('priority',e.target.value)}>{PRIORITY.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></Field></div>
+  </Modal>;
+}
+
+function NoteForm({api,onClose,init}){
+  const {addNote,updNote}=api;const edit=!!init;
+  const [d,setD]=useState(init||{title:'',body:''});const set=(k,v)=>setD(s=>({...s,[k]:v}));
+  const save=()=>{if(!d.title.trim()&&!d.body.trim())return;edit?updNote(init.id,d):addNote(d);onClose()};
+  return <Modal title={edit?'Edit note':'New note'} icon="note" onClose={onClose}
+    footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn pri" onClick={save}>{edit?'Save':'Add'}</button></>}>
+    <Field label="Title"><input className="inp" autoFocus value={d.title} onChange={e=>set('title',e.target.value)}/></Field>
+    <Field label="Note"><textarea className="inp" style={{minHeight:140}} value={d.body} onChange={e=>set('body',e.target.value)}/></Field>
+  </Modal>;
+}
+
+/* ---------- Faults ---------- */
+function Faults({api}){
+  const {S,setModal}=api;const [q,setQ]=useState('');const [g,setG]=useState('all');
+  const grades=['all',...Object.keys(GRADE_C)];
+  let list=S.codes;
+  if(g!=='all')list=list.filter(c=>c.grade===g);
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(c=>k.every(w=>(c.code+' '+c.name+' '+(c.description||'')).toLowerCase().includes(w)))}
+  return <div>
+    <div className="search" style={{marginBottom:12}}><Icon n="search"/><input placeholder="Search fault code or symptom…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <div className="seg" style={{marginBottom:14,flexWrap:'wrap'}}>{grades.map(x=><button key={x} className={g===x?'on':''} onClick={()=>setG(x)}>
+      {x==='all'?'All':x.replace(' failure','')}</button>)}</div>
+    <div className="grid cols-2">{list.map(c=><div key={c.code} className="glass pad">
+      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+        <span className="mono" style={{fontWeight:700,fontSize:14.5}}>{c.code}</span>
+        <Badge c={GRADE_C[c.grade]}>{c.grade.replace(' failure','')}</Badge>
+        <span className="chip" style={{marginLeft:'auto'}}>{c.light_status}</span></div>
+      <div style={{fontWeight:640,marginTop:8}}>{c.name}</div>
+      <div style={{fontSize:13,color:'var(--ink2)',lineHeight:1.5,marginTop:4}}>{c.description}</div>
+      <button className="btn sm" style={{marginTop:10}} onClick={()=>setModal({type:'ticket',init:{}})}><Icon n="ticket"/>Raise ticket</button>
+    </div>)}{!list.length&&<Empty icon="alert" title="No matching codes"/>}</div>
+  </div>;
+}
+
+/* ---------- Site Visits ---------- */
+function Visits({api}){
+  const {S,go,setModal}=api;const [q,setQ]=useState('');const [f,setF]=useState('all');
+  const cn=id=>S.cust.find(c=>c.id===id)?.name||'';
+  let list=[...S.visits].sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.created_at-a.created_at);
+  if(f!=='all')list=list.filter(v=>v.type===f);
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(v=>k.every(w=>(v.ref+' '+(v.summary||'')+' '+v.customer_ids.map(cn).join(' ')).toLowerCase().includes(w)))}
+  return <div>
+    <div className="search" style={{marginBottom:12}}><Icon n="search"/><input placeholder="Search visits, customers…" value={q} onChange={e=>setQ(e.target.value)}/></div>
+    <div className="seg" style={{marginBottom:14,flexWrap:'wrap'}}>{['all',...VISIT_TYPES.map(t=>t.id)].map(x=><button key={x} className={f===x?'on':''} onClick={()=>setF(x)}>{x==='all'?'All':vtMeta(x).label}</button>)}</div>
+    <div className="glass">{list.length?list.map(v=><div key={v.id} className="row" onClick={()=>go('visit',{id:v.id})}>
+      <span className="mono" style={{fontSize:12,color:'var(--ink3)',flex:'0 0 64px'}}>{v.ref}</span>
+      <div className="grow"><div className="ttl">{v.customer_ids.map(cn).filter(Boolean).join(', ')||'No customer'}</div>
+        <div className="meta">{fmt(v.date)} · {v.charger_ids.length} charger{v.charger_ids.length!==1?'s':''} · {v.records.length} record{v.records.length!==1?'s':''}</div></div>
+      <Badge c={vtMeta(v.type).c}>{vtMeta(v.type).label}</Badge>
+      <span className="chip" style={{color:v.status==='completed'?'var(--s-solved)':'var(--s-await)'}}>{v.status==='completed'?'Completed':'Open'}</span></div>)
+      :<Empty icon="clipboard" title="No visits logged" sub="Log a callout or maintenance visit with the button above."/>}</div>
+  </div>;
+}
+
+function RecordForm({api,chargerIds,onAdd}){
+  const {S}=api;const [r,setR]=useState({charger_id:'',issue:'',resolution:'',parts:'',outcome:'resolved'});
+  const set=(k,v)=>setR(s=>({...s,[k]:v}));
+  const chargers=chargerIds.map(id=>S.chargers.find(c=>c.id===id)).filter(Boolean);
+  const add=()=>{if(!r.issue.trim()&&!r.resolution.trim())return;onAdd(r);setR({charger_id:'',issue:'',resolution:'',parts:'',outcome:'resolved'})};
+  return <div className="rec">
+    <Field label="Charger (optional)"><select className="inp" value={r.charger_id} onChange={e=>set('charger_id',e.target.value)}>
+      <option value="">— Whole site / unspecified —</option>{chargers.map(c=><option key={c.id} value={c.id}>{c.serial_number} · {c.model_no}</option>)}</select></Field>
+    <Field label="Issue / fault found"><textarea className="inp" value={r.issue} onChange={e=>set('issue',e.target.value)} placeholder="What was wrong on arrival?"/></Field>
+    <Field label="Resolution / work done"><textarea className="inp" value={r.resolution} onChange={e=>set('resolution',e.target.value)} placeholder="What did you do to fix it?"/></Field>
+    <div className="grid cols-2">
+      <Field label="Parts / materials"><input className="inp" value={r.parts} onChange={e=>set('parts',e.target.value)} placeholder="e.g. RCBO, contactor"/></Field>
+      <Field label="Outcome"><select className="inp" value={r.outcome} onChange={e=>set('outcome',e.target.value)}>{OUTCOMES.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}</select></Field>
+    </div>
+    <button className="btn pri sm" onClick={add}><Icon n="plus"/>Add maintenance record</button>
+  </div>;
+}
+
+function RecordCard({api,r,onDel}){
+  const {S}=api;const ch=S.chargers.find(c=>c.id===r.charger_id);
+  return <div className="rec">
+    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:7,flexWrap:'wrap'}}>
+      <Badge c={ocMeta(r.outcome).c}>{ocMeta(r.outcome).label}</Badge>
+      {ch&&<span className="chip mono">{ch.serial_number}</span>}
+      {onDel&&<button className="iconbtn" style={{width:28,height:28,marginLeft:'auto'}} onClick={onDel}><Icon n="trash"/></button>}
+    </div>
+    {r.issue&&<div style={{fontSize:13.5,lineHeight:1.5}}><span style={{color:'var(--ink3)',fontWeight:640}}>Issue: </span>{r.issue}</div>}
+    {r.resolution&&<div style={{fontSize:13.5,lineHeight:1.5,marginTop:5}}><span style={{color:'var(--ink3)',fontWeight:640}}>Resolution: </span>{r.resolution}</div>}
+    {r.parts&&<div style={{fontSize:12.5,color:'var(--ink3)',marginTop:5}}>Parts: {r.parts}</div>}
+  </div>;
+}
+
+function VisitForm({api,onClose}){
+  const {S,addVisit,go}=api;
+  const [d,setD]=useState({date:today(),type:'callout',customer_ids:[],charger_ids:[],attended_by:[api.me.id],summary:'',status:'open'});
+  const [records,setRecords]=useState([]);
+  const set=(k,v)=>setD(s=>({...s,[k]:v}));
+  const addCust=id=>id&&!d.customer_ids.includes(id)&&set('customer_ids',[...d.customer_ids,id]);
+  const remCust=id=>set('customer_ids',d.customer_ids.filter(x=>x!==id));
+  const addChg=id=>id&&!d.charger_ids.includes(id)&&set('charger_ids',[...d.charger_ids,id]);
+  const remChg=id=>set('charger_ids',d.charger_ids.filter(x=>x!==id));
+  const toggleEng=id=>set('attended_by',d.attended_by.includes(id)?d.attended_by.filter(x=>x!==id):[...d.attended_by,id]);
+  const valid=d.customer_ids.length>0&&d.charger_ids.length>0;
+  const avail=S.cust.filter(c=>!d.customer_ids.includes(c.id));
+  const save=async()=>{if(!valid)return;const v=await addVisit({...d,records});if(!v)return;onClose();go('visit',{id:v.id})};
+  return <Modal title="Log site visit" icon="clipboard" onClose={onClose}
+    footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn pri" onClick={save} style={valid?{}:{opacity:.45}}>Save visit</button></>}>
+    <div className="grid cols-2">
+      <Field label="Visit date"><input type="date" className="inp" value={d.date} onChange={e=>set('date',e.target.value)}/></Field>
+      <Field label="Status"><select className="inp" value={d.status} onChange={e=>set('status',e.target.value)}><option value="open">Open</option><option value="completed">Completed</option></select></Field>
+    </div>
+    <div className="lab" style={{fontSize:12,fontWeight:640,color:'var(--ink2)',marginBottom:6}}>Visit type</div>
+    <div className="seg" style={{marginBottom:14,flexWrap:'wrap'}}>{VISIT_TYPES.map(t=><button key={t.id} className={d.type===t.id?'on':''} onClick={()=>set('type',t.id)}>{t.label}</button>)}</div>
+    <Field label="Customers *">
+      {d.customer_ids.length>0&&<div className="wrapflex" style={{marginBottom:8}}>{d.customer_ids.map(id=>{const c=S.cust.find(x=>x.id===id);return <span key={id} className="tagchip">{c?.name}<button onClick={()=>remCust(id)}><Icon n="x"/></button></span>})}</div>}
+      <select className="inp" value="" onChange={e=>addCust(e.target.value)}><option value="">+ Add customer…</option>{avail.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+    </Field>
+    <Field label="Chargers *">
+      {d.charger_ids.length>0&&<div className="wrapflex" style={{marginBottom:8}}>{d.charger_ids.map(id=>{const c=S.chargers.find(x=>x.id===id);return <span key={id} className="tagchip"><span className="mono">{c?.serial_number}</span><button onClick={()=>remChg(id)}><Icon n="x"/></button></span>})}</div>}
+      <ChargerCombobox api={api} value={null} onSelect={id=>addChg(id)} placeholder="Type a serial to add a charger…"/>
+    </Field>
+    <Field label="Attended by"><div className="wrapflex">{api.S.team.map(u=><button key={u.id} className="chip" onClick={()=>toggleEng(u.id)}
+      style={d.attended_by.includes(u.id)?{borderColor:'var(--accent)',color:'var(--accent)'}:{}}>{u.name}</button>)}</div></Field>
+    <Field label="Summary"><textarea className="inp" value={d.summary} onChange={e=>set('summary',e.target.value)} placeholder="Overview of the visit…"/></Field>
+    <hr style={{border:0,borderTop:'1px solid var(--hair)',margin:'4px 0 12px'}}/>
+    <div style={{fontWeight:680}}>Maintenance records</div>
+    <div style={{fontSize:12,color:'var(--ink3)',margin:'2px 0 12px'}}>Add one record per issue worked on. You can also add more after saving.</div>
+    {records.map((r,i)=><RecordCard key={r.id||i} api={api} r={r} onDel={()=>setRecords(records.filter((_,j)=>j!==i))}/>)}
+    <RecordForm api={api} chargerIds={d.charger_ids} onAdd={r=>setRecords(rs=>[...rs,{...r,id:uid()}])}/>
+  </Modal>;
+}
+
+function VisitDetail({api,id}){
+  const {S,go,updVisit,addVisitRecord,delVisitRecord}=api;
+  const v=S.visits.find(x=>x.id===id);if(!v)return <Empty icon="clipboard" title="Visit not found"/>;
+  const custs=v.customer_ids.map(cid=>S.cust.find(c=>c.id===cid)).filter(Boolean);
+  const chgs=v.charger_ids.map(cid=>S.chargers.find(c=>c.id===cid)).filter(Boolean);
+  const eng=v.attended_by.map(u=>api.S.team.find(x=>x.id===u)?.name).filter(Boolean).join(', ');
+  return <div className="grid cols-2" style={{alignItems:'start'}}>
+    <div>
+      <div className="glass pad">
+        <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+          <span className="mono" style={{color:'var(--ink3)'}}>{v.ref}</span>
+          <Badge c={vtMeta(v.type).c}>{vtMeta(v.type).label}</Badge>
+          <span style={{fontSize:13,color:'var(--ink3)'}}>{fmt(v.date)}</span></div>
+        <div className="lab" style={{fontSize:12,fontWeight:640,color:'var(--ink2)',margin:'12px 0 7px'}}>Status</div>
+        <div className="seg"><button className={v.status==='open'?'on':''} onClick={()=>updVisit(id,{status:'open'})}>Open</button>
+          <button className={v.status==='completed'?'on':''} onClick={()=>updVisit(id,{status:'completed'})}>Completed</button></div>
+        {v.summary&&<p style={{color:'var(--ink2)',fontSize:14,lineHeight:1.55,marginTop:14,marginBottom:6}}>{v.summary}</p>}
+        <div className="kv"><span className="k">Attended by</span><span className="v">{eng||'—'}</span></div>
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{fontWeight:680,marginBottom:8}}>Customers</div>
+        {custs.map(c=><div key={c.id} className="linkrow"><div className="avatar" style={{flex:'0 0 30px'}}>{c.name.slice(0,1)}</div>
+          <div className="grow" style={{cursor:'pointer'}} onClick={()=>go('customer',{id:c.id})}><div style={{fontWeight:600,fontSize:13.5}}>{c.name}</div>
+            <div style={{fontSize:12,color:'var(--ink3)'}}>{c.phone||c.email||''}</div></div></div>)}
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{fontWeight:680,marginBottom:8}}>Chargers on this visit</div>
+        {chgs.map(c=><div key={c.id} className="linkrow"><Icon n="charger" style={{width:18,height:18,color:'var(--accent2)'}}/>
+          <div className="grow" style={{cursor:'pointer'}} onClick={()=>go('charger',{id:c.id})}><div className="mono" style={{fontWeight:600,fontSize:13.5}}>{c.serial_number}</div>
+            <div style={{fontSize:12,color:'var(--ink3)'}}>{c.model_no} · {c.charger_information}</div></div>
+          <button className="iconbtn" style={{width:32,height:32}} title="Open in Monta Control" onClick={()=>openMonta(c.serial_number)}><Icon n="ext"/></button></div>)}
+      </div>
+    </div>
+    <div className="glass pad">
+      <div style={{fontWeight:680,marginBottom:10}}>Maintenance records</div>
+      {v.records.length?v.records.map(r=><RecordCard key={r.id} api={api} r={r} onDel={()=>delVisitRecord(id,r.id)}/>):<Empty icon="wrench" title="No records yet"/>}
+      <div style={{fontWeight:640,fontSize:13,color:'var(--ink2)',margin:'8px 0 6px'}}>Add a record</div>
+      <RecordForm api={api} chargerIds={v.charger_ids} onAdd={r=>addVisitRecord(id,r)}/>
+    </div>
+  </div>;
+}
+
+/* ---------- Settings ---------- */
+function Settings({theme,setTheme,accent,setAccent,compact,setCompact,motion,setMotion,defs,setDefs,api}){
+  const ACCENTS=[['#209f95','EV teal'],['#0A84FF','Blue'],['#BF5AF2','Purple'],['#30D158','Green'],['#FF9F0A','Amber'],['#FF453A','Red']];
+  const Toggle=({on,set})=><button onClick={()=>set(!on)} style={{width:48,height:28,borderRadius:30,border:0,cursor:'pointer',
+    background:on?'var(--accent)':'var(--field)',position:'relative',transition:'.2s'}}>
+    <span style={{position:'absolute',top:3,left:on?23:3,width:22,height:22,borderRadius:'50%',background:'#fff',transition:'.2s',boxShadow:'0 1px 3px rgba(0,0,0,.3)'}}></span></button>;
+  const Rowt=({label,sub,children})=><div style={{display:'flex',alignItems:'center',gap:14,padding:'12px 0',borderBottom:'1px solid var(--hair)'}}>
+    <div style={{flex:1}}><div style={{fontWeight:600,fontSize:14}}>{label}</div>{sub&&<div style={{fontSize:12,color:'var(--ink3)',marginTop:2}}>{sub}</div>}</div>{children}</div>;
+  return <div className="grid cols-2" style={{alignItems:'start'}}>
+    <div>
+      <div className="glass pad">
+        <div style={{fontWeight:680,marginBottom:6}}>Appearance</div>
+        <Rowt label="Theme">
+          <div className="seg"><button className={theme==='dark'?'on':''} onClick={()=>setTheme('dark')}><Icon n="moon" style={{width:15,height:15,verticalAlign:'-2px',marginRight:6}}/>Dark</button>
+          <button className={theme==='light'?'on':''} onClick={()=>setTheme('light')}><Icon n="sun" style={{width:15,height:15,verticalAlign:'-2px',marginRight:6}}/>Light</button></div>
+        </Rowt>
+        <div style={{padding:'12px 0',borderBottom:'1px solid var(--hair)'}}>
+          <div style={{fontWeight:600,fontSize:14,marginBottom:10}}>Accent colour</div>
+          <div className="wrapflex">{ACCENTS.map(([hex,name])=><button key={hex} onClick={()=>setAccent(hex)} title={name}
+            style={{width:30,height:30,borderRadius:'50%',background:hex,cursor:'pointer',
+            border:accent===hex?'3px solid var(--ink)':'2px solid var(--hair)',boxShadow:'0 2px 8px '+hex+'66'}}></button>)}</div>
+        </div>
+        <Rowt label="Compact mode" sub="Tighter spacing, more on screen"><Toggle on={compact} set={setCompact}/></Rowt>
+        <Rowt label="Animations" sub="Glass drift and transitions"><Toggle on={motion} set={setMotion}/></Rowt>
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{fontWeight:680,marginBottom:6}}>New ticket defaults</div>
+        <Rowt label="Default priority">
+          <select className="inp" style={{width:140}} value={defs.priority} onChange={e=>setDefs(d=>({...d,priority:e.target.value}))}>{PRIORITY.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></Rowt>
+        <Rowt label="Default status">
+          <select className="inp" style={{width:170}} value={defs.status} onChange={e=>setDefs(d=>({...d,status:e.target.value}))}>{STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Rowt>
+      </div>
+    </div>
+    <div>
+      <div className="glass pad">
+        <div style={{fontWeight:680,marginBottom:6}}>Integrations</div>
+        <Rowt label="Monta Control" sub="Charger pages open control-v2.monta.app by serial">
+          <span className="badge"><span className="dot" style={{background:'var(--s-solved)'}}></span>Linked</span></Rowt>
+        <div style={{fontSize:12,color:'var(--ink3)',marginTop:10,lineHeight:1.5}}>Each charger has an “Open in Monta Control” button that jumps straight to that unit using its serial number.</div>
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{fontWeight:680,marginBottom:8}}>Account & data</div>
+        <div className="kv"><span className="k">Signed in</span><span className="v">{api.me.name}</span></div>
+        <div className="kv"><span className="k">Mode</span><span className="v"><span className="badge"><span className="dot" style={{background:'var(--s-solved)'}}></span>Live · Supabase</span></span></div>
+        <div className="kv"><span className="k">Database</span><span className="v mono" style={{fontSize:11.5,wordBreak:'break-all'}}>{(api.cfg&&api.cfg.url||'').replace(/^https?:\/\//,'')}</span></div>
+        <div className="kv"><span className="k">Chargers</span><span className="v">{api.S.chargers.length}</span></div>
+        <div className="kv"><span className="k">Fault codes</span><span className="v">{api.S.codes.length}</span></div>
+        <div className="kv"><span className="k">Team members</span><span className="v">{api.S.team.length}</span></div>
+        <div style={{display:'flex',gap:8,marginTop:14}}>
+          <button className="btn" style={{flex:1}} onClick={()=>api.signOut()}>Sign out</button>
+          <button className="btn" style={{flex:1}} onClick={()=>{if(window.confirm('Forget this device\u2019s saved database connection? You\u2019ll need the URL and key to reconnect.'))api.disconnect();}}>Disconnect</button>
+        </div>
+        <div style={{fontSize:12,color:'var(--ink3)',marginTop:12,lineHeight:1.55}}>
+          Tickets, customers, chargers and visits are shared across the team. Tasks, notes, and these appearance settings are private to you and sync to your account.</div>
+      </div>
+    </div>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
