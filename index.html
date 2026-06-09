@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="manifest" href="manifest.webmanifest" />
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-<link rel="icon" href="icons/favicon.png" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" href="favicon.png" />
 <title>Lewden Support Hub</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
@@ -180,6 +180,7 @@ select.inp{appearance:none;cursor:pointer}
 .comboitem{display:flex;flex-direction:column;gap:2px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--hair)}
 .comboitem:last-child{border-bottom:0}
 .comboitem:hover{background:var(--hair)}
+.comboitem.on{background:color-mix(in srgb,var(--accent) 16%,transparent)}
 .comboitem .mt{font-size:12px;color:var(--ink3)}
 .tagchip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:11px;background:var(--field);border:1px solid var(--hair);font-size:13px;font-weight:600}
 .tagchip button{border:0;background:transparent;color:var(--ink3);cursor:pointer;display:grid;place-items:center;padding:0}
@@ -424,25 +425,34 @@ function Empty({icon,title,sub}){return <div className="empty"><Icon n={icon||'n
 
 /* Typeahead serial picker — type what the customer reads out, pick from suggestions */
 function ChargerCombobox({api,value,onSelect,placeholder,allowClear=true}){
-  const {S}=api;const [q,setQ]=useState('');
+  const {S}=api;const [q,setQ]=useState('');const [hi,setHi]=useState(0);
   const selected = value? S.chargers.find(c=>c.id===value):null;
   const matches = useMemo(()=>{
     const t=q.trim().toLowerCase(); if(!t) return [];
     const k=t.split(/\s+/);
-    return S.chargers.filter(c=>k.every(w=>(c.serial_number+' '+c.model_no+' '+(c.charger_information||'')+' '+(c.notes||'')).toLowerCase().includes(w))).slice(0,8);
+    return S.chargers.filter(c=>k.every(w=>(c.serial_number+' '+(c.model_no||'')+' '+(c.charger_information||'')+' '+(c.notes||'')).toLowerCase().includes(w))).slice(0,8);
   },[q,S.chargers]);
+  useEffect(()=>{setHi(0)},[q]);
+  const pick=c=>{if(!c)return;onSelect(c.id);setQ('')};
+  const onKey=e=>{
+    if(!matches.length)return;
+    if(e.key==='ArrowDown'){e.preventDefault();setHi(h=>Math.min(h+1,matches.length-1))}
+    else if(e.key==='ArrowUp'){e.preventDefault();setHi(h=>Math.max(h-1,0))}
+    else if(e.key==='Enter'){e.preventDefault();pick(matches[hi]||matches[0])}
+  };
   if(selected) return <div className="linkrow" style={{margin:0}}>
     <Icon n="charger" style={{width:18,height:18,color:'var(--accent2)'}}/>
     <div className="grow"><div className="mono" style={{fontWeight:600,fontSize:13.5}}>{selected.serial_number}</div>
       <div style={{fontSize:12,color:'var(--ink3)'}}>{selected.model_no} · {selected.charger_information}</div></div>
     {allowClear&&<button className="iconbtn" style={{width:30,height:30}} onClick={()=>onSelect(null)}><Icon n="x"/></button>}</div>;
   return <div>
-    <div className="search"><Icon n="search"/><input value={q} onChange={e=>setQ(e.target.value)}
+    <div className="search"><Icon n="search"/><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={onKey}
       placeholder={placeholder||'Type the serial the customer reads out…'} inputMode="numeric"/></div>
-    {q.trim()&&<div className="combo">{matches.length?matches.map(c=><div key={c.id} className="comboitem" onClick={()=>{onSelect(c.id);setQ('')}}>
+    {q.trim()&&<div className="combo">{matches.length?matches.map((c,i)=><div key={c.id} className={'comboitem'+(i===hi?' on':'')}
+      onMouseEnter={()=>setHi(i)} onMouseDown={e=>{e.preventDefault();pick(c)}}>
       <span className="mono" style={{fontWeight:600,fontSize:13.5}}>{c.serial_number}</span>
       <span className="mt">{c.model_no} · {c.charger_information}{c.notes?' · '+c.notes:''}</span></div>)
-      :<div className="comboitem" style={{color:'var(--ink3)',cursor:'default'}}>No charger matches “{q}”.</div>}</div>}
+      :<div className="comboitem" style={{color:'var(--ink3)',cursor:'default'}}>No charger matches “{q}”. Check the full serial, or add it on the Chargers page.</div>}</div>}
   </div>;
 }
 
@@ -651,6 +661,7 @@ function App(){
     <button className="fab" onClick={()=>setModal({type:'ticket'})}><Icon n="plus"/></button>
 
     {modal?.type==='ticket'&&<TicketForm api={api} init={modal.init} onClose={()=>setModal(null)}/>}
+    {modal?.type==='ticketEdit'&&<TicketEditForm api={api} id={modal.id} onClose={()=>setModal(null)}/>}
     {modal?.type==='customer'&&<CustomerForm api={api} init={modal.init} onClose={()=>setModal(null)}/>}
     {modal?.type==='task'&&<TaskForm api={api} onClose={()=>setModal(null)}/>}
     {modal?.type==='note'&&<NoteForm api={api} init={modal.init} onClose={()=>setModal(null)}/>}
@@ -822,8 +833,38 @@ function TicketForm({api,onClose,init}){
   </Modal>;
 }
 
+function TicketEditForm({api,id,onClose}){
+  const {S,updTicket}=api;
+  const t=S.tickets.find(x=>x.id===id);
+  const [d,setD]=useState(t?{customer_id:t.customer_id||'',charger_id:t.charger_id||'',title:t.title||'',description:t.description||'',status:t.status,priority:t.priority,fault:t.fault||'',follow_up:t.follow_up||'',assigned_to:t.assigned_to||''}:null);
+  if(!t||!d) return null;
+  const set=(k,v)=>setD(s=>({...s,[k]:v}));
+  const save=()=>{if(!d.title.trim())return;
+    updTicket(id,{customer_id:d.customer_id||null,charger_id:d.charger_id||null,title:d.title.trim(),description:d.description||null,status:d.status,priority:d.priority,fault:d.fault||null,follow_up:d.follow_up||null,assigned_to:d.assigned_to||null});
+    onClose();};
+  return <Modal title={'Edit '+t.ref} icon="ticket" onClose={onClose}
+    footer={<><button className="btn" onClick={onClose}>Cancel</button><button className="btn pri" onClick={save}>Save changes</button></>}>
+    <Field label="Title *"><input className="inp" autoFocus value={d.title} onChange={e=>set('title',e.target.value)} placeholder="Short summary of the issue"/></Field>
+    <Field label="Description"><textarea className="inp" value={d.description} onChange={e=>set('description',e.target.value)} placeholder="What did the customer report?"/></Field>
+    <div className="grid cols-2">
+      <Field label="Status"><select className="inp" value={d.status} onChange={e=>set('status',e.target.value)}>{STATUS.map(s=><option key={s.id} value={s.id}>{s.label}</option>)}</select></Field>
+      <Field label="Priority"><select className="inp" value={d.priority} onChange={e=>set('priority',e.target.value)}>{PRIORITY.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></Field>
+    </div>
+    <div className="grid cols-2">
+      <Field label="Fault code"><select className="inp" value={d.fault} onChange={e=>set('fault',e.target.value)}>
+        <option value="">— None —</option>{S.codes.map(c=><option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}</select></Field>
+      <Field label="Follow-up date"><input type="date" className="inp" value={d.follow_up} onChange={e=>set('follow_up',e.target.value)}/></Field>
+    </div>
+    <Field label="Customer"><select className="inp" value={d.customer_id} onChange={e=>set('customer_id',e.target.value)}>
+      <option value="">— No customer —</option>{S.cust.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+    <Field label="Charger (serial)"><ChargerCombobox api={api} value={d.charger_id} onSelect={cid=>set('charger_id',cid)}/></Field>
+    <Field label="Assigned to"><select className="inp" value={d.assigned_to} onChange={e=>set('assigned_to',e.target.value)}>
+      <option value="">— Unassigned —</option>{S.team.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></Field>
+  </Modal>;
+}
+
 function TicketDetail({api,id}){
-  const {S,go,updTicket,addTUpdate}=api;
+  const {S,go,updTicket,addTUpdate,setModal}=api;
   const t=S.tickets.find(x=>x.id===id); if(!t)return <Empty icon="ticket" title="Ticket not found"/>;
   const cust=S.cust.find(c=>c.id===t.customer_id);
   const charger=S.chargers.find(c=>c.id===t.charger_id);
@@ -838,6 +879,8 @@ function TicketDetail({api,id}){
         <span className="mono" style={{color:'var(--ink3)'}}>{t.ref}</span>
         <Badge c={pMeta(t.priority).c}>{pMeta(t.priority).label}</Badge>
         {code&&<Badge c={GRADE_C[code.grade]}>{code.code}</Badge>}
+        <div style={{flex:1}}></div>
+        <button className="btn sm" onClick={()=>setModal({type:'ticketEdit',id})}><Icon n="edit"/>Edit</button>
       </div>
       <h2 style={{margin:'10px 0 6px',fontSize:21,fontWeight:720}}>{t.title}</h2>
       <p style={{color:'var(--ink2)',fontSize:14.5,lineHeight:1.55,marginTop:0}}>{t.description||'No description.'}</p>
