@@ -181,6 +181,10 @@ select.inp{appearance:none;cursor:pointer}
 .comboitem:last-child{border-bottom:0}
 .comboitem:hover{background:var(--hair)}
 .comboitem.on{background:color-mix(in srgb,var(--accent) 16%,transparent)}
+.tgl{width:44px;height:26px;border-radius:999px;background:var(--field);border:1px solid var(--hair);position:relative;cursor:pointer;flex:0 0 44px;padding:0;transition:background .15s,border-color .15s}
+.tgl .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--ink2);transition:transform .16s,background .16s}
+.tgl.on{background:var(--accent);border-color:transparent}
+.tgl.on .knob{transform:translateX(18px);background:#fff}
 .comboitem .mt{font-size:12px;color:var(--ink3)}
 .tagchip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:11px;background:var(--field);border:1px solid var(--hair);font-size:13px;font-weight:600}
 .tagchip button{border:0;background:transparent;color:var(--ink3);cursor:pointer;display:grid;place-items:center;padding:0}
@@ -274,6 +278,7 @@ const I = {
   mail:<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM22 7l-10 6L2 7"/>,
   pin2:<path d="M12 21s7-5.5 7-11a7 7 0 1 0-14 0c0 5.5 7 11 7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>,
   flame:<path d="M12 2s4 4 4 8a4 4 0 0 1-8 0c0-1 .5-2 1-2.5C8 9 12 8 12 2z M8.5 14a3.5 3.5 0 1 0 7 0c0-2-2-3-3.5-5-1.5 2-3.5 3-3.5 5z"/>,
+  signal:<React.Fragment><path d="M12 21v-7"/><path d="M8.5 17.5a5 5 0 0 1 7 0"/><path d="M5.5 14.5a9 9 0 0 1 13 0"/><circle cx="12" cy="11.5" r="0.6" fill="currentColor"/></React.Fragment>,
 };
 const Icon = ({n,style}) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" style={style}>{I[n]}</svg>;
 
@@ -1026,7 +1031,7 @@ function LinkChargerModal({api,customer_id,onClose}){
 function Chargers({api}){
   const {S,go}=api;const [q,setQ]=useState('');
   let list=S.chargers;
-  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(c=>k.every(w=>(c.serial_number+' '+c.model_no+' '+c.charger_information+' '+(c.firmware_version||'')+' '+(c.notes||'')).toLowerCase().includes(w)))}
+  if(q){const k=q.toLowerCase().split(/\s+/);list=list.filter(c=>k.every(w=>(c.serial_number+' '+c.model_no+' '+c.charger_information+' '+(c.firmware_version||'')+' '+(c.notes||'')+' '+(c.iccid||'')+' '+(c.is_4g?'4g':'')).toLowerCase().includes(w)))}
   const owners=id=>S.links.filter(l=>l.charger_id===id).length;
   return <div>
     <div className="search" style={{marginBottom:8}}><Icon n="search"/><input placeholder="Search serial, model, firmware, note…" value={q} onChange={e=>setQ(e.target.value)}/></div>
@@ -1035,6 +1040,7 @@ function Chargers({api}){
       <Icon n="charger" style={{width:18,height:18,color:'var(--accent2)',flex:'0 0 18px'}}/>
       <div className="grow"><div className="ttl mono" style={{fontSize:13.5}}>{c.serial_number}</div>
         <div className="meta">{c.model_no} · {c.charger_information}{c.firmware_version?' · '+c.firmware_version:''}</div></div>
+      {c.is_4g&&<span className="chip" style={{color:'var(--accent)'}}><Icon n="signal" style={{width:12,height:12}}/>4G</span>}
       {c.notes&&<span className="chip" style={{color:'var(--g-serious)'}}>{c.notes}</span>}
       {owners(c.id)>0&&<span className="chip"><Icon n="users" style={{width:12,height:12}}/>{owners(c.id)}</span>}
       <button className="iconbtn" style={{width:32,height:32}} title="Open in Monta Control" onClick={e=>{e.stopPropagation();openMonta(c.serial_number)}}><Icon n="ext"/></button></div>)}
@@ -1052,11 +1058,16 @@ function ChargerDetail({api,id}){
   const [body,setBody]=useState('');
   const post=()=>{if(!body.trim())return;addChargerNote(id,body.trim());setBody('')};
   const author=uid=>(api.S.team.find(u=>u.id===uid)?.name)||'—';
+  const [iccid,setIccid]=useState(c.iccid||'');
+  useEffect(()=>{setIccid(c.iccid||'')},[c.iccid]);
+  const saveIccid=()=>{const v=iccid.trim();if(v!==(c.iccid||''))updCharger(id,{iccid:v||null})};
+  const toggle4g=()=>updCharger(id,{is_4g:!c.is_4g});
   return <div className="grid cols-2" style={{alignItems:'start'}}>
     <div>
       <div className="glass pad">
         <div style={{display:'flex',alignItems:'center',gap:10}}><Icon n="charger" style={{width:26,height:26,color:'var(--accent2)'}}/>
-          <div className="mono" style={{fontSize:19,fontWeight:700,flex:1,wordBreak:'break-all'}}>{c.serial_number}</div></div>
+          <div className="mono" style={{fontSize:19,fontWeight:700,flex:1,wordBreak:'break-all'}}>{c.serial_number}</div>
+          {c.is_4g&&<Badge c="var(--accent)"><Icon n="signal" style={{width:12,height:12}}/>4G</Badge>}</div>
         <button className="btn pri" style={{width:'100%',marginTop:12}} onClick={()=>openMonta(c.serial_number)}><Icon n="ext"/>Open in Monta Control</button>
         <div style={{marginTop:12}}>
           <div className="kv"><span className="k">Model</span><span className="v">{c.model_no}</span></div>
@@ -1069,6 +1080,19 @@ function ChargerDetail({api,id}){
           <div className="kv"><span className="k">Connect pw</span><span className="v mono">{c.lewden_connect_password||'—'}</span></div>
           {c.notes&&<div className="kv"><span className="k">Factory note</span><span className="v" style={{color:'var(--g-serious)'}}>{c.notes}</span></div>}
         </div>
+      </div>
+      <div className="glass pad" style={{marginTop:14}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <Icon n="signal" style={{width:18,height:18,color:c.is_4g?'var(--accent)':'var(--ink3)'}}/>
+          <div style={{fontWeight:680,flex:1}}>4G connectivity</div>
+          <button className={'tgl'+(c.is_4g?' on':'')} role="switch" aria-checked={!!c.is_4g} onClick={toggle4g} title="Mark as a 4G unit"><span className="knob"></span></button>
+        </div>
+        {c.is_4g
+          ? <div style={{marginTop:12}}>
+              <Field label="SIM ICCID"><input className="inp mono" value={iccid} onChange={e=>setIccid(e.target.value)} onBlur={saveIccid} onKeyDown={e=>{if(e.key==='Enter')e.target.blur()}} placeholder="e.g. 8944500…" inputMode="numeric"/></Field>
+              <div style={{fontSize:12,color:'var(--ink3)',marginTop:-2}}>ICCID of the SIM used for this unit's 4G connection. Saves automatically.</div>
+            </div>
+          : <div style={{fontSize:12.5,color:'var(--ink3)',marginTop:8}}>Wi‑Fi / LAN unit. Toggle on if this charger uses a 4G SIM, then add its ICCID.</div>}
       </div>
       <div className="glass pad" style={{marginTop:14}}>
         <div style={{fontWeight:680,marginBottom:8}}>Owners</div>
