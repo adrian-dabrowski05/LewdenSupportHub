@@ -324,20 +324,35 @@ const clearCfg=()=>{try{localStorage.removeItem(SB_KEY)}catch(e){}};
 const ts=v=>v?Date.parse(v):0;
 const initials=n=>(n||'?').trim().slice(0,2).toUpperCase();
 
+// Fetch every row, paging past PostgREST's per-request row cap (default 1000).
+async function fetchAll(client,table,order){
+  const PAGE=1000;let from=0;let all=[];
+  for(;;){
+    let q=client.from(table).select('*').range(from,from+PAGE-1);
+    if(order) q=q.order(order);
+    const {data,error}=await q;
+    if(error) return {data:all,error};
+    all=all.concat(data||[]);
+    if(!data||data.length<PAGE) break;
+    from+=PAGE;
+  }
+  return {data:all,error:null};
+}
+
 async function loadAll(client){
   const R=await Promise.all([
-    client.from('profiles').select('*'),
-    client.from('error_codes').select('*'),
-    client.from('chargers').select('*').order('serial_number'),
-    client.from('customers').select('*'),
-    client.from('customer_chargers').select('*'),
-    client.from('tickets').select('*'),
-    client.from('ticket_updates').select('*'),
-    client.from('charger_notes').select('*'),
-    client.from('visits').select('*'),
-    client.from('visit_records').select('*'),
-    client.from('tasks').select('*'),
-    client.from('personal_notes').select('*'),
+    fetchAll(client,'profiles'),
+    fetchAll(client,'error_codes'),
+    fetchAll(client,'chargers','serial_number'),
+    fetchAll(client,'customers'),
+    fetchAll(client,'customer_chargers'),
+    fetchAll(client,'tickets'),
+    fetchAll(client,'ticket_updates'),
+    fetchAll(client,'charger_notes'),
+    fetchAll(client,'visits'),
+    fetchAll(client,'visit_records'),
+    fetchAll(client,'tasks'),
+    fetchAll(client,'personal_notes'),
     client.from('user_settings').select('*').maybeSingle(),
     client.auth.getUser(),
   ]);
