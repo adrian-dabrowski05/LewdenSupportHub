@@ -185,6 +185,8 @@ select.inp{appearance:none;cursor:pointer}
 .tgl .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--ink2);transition:transform .16s,background .16s}
 .tgl.on{background:var(--accent);border-color:transparent}
 .tgl.on .knob{transform:translateX(18px);background:#fff}
+.linkbtn{background:none;border:0;color:var(--accent);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:6px}
+.linkbtn:hover{text-decoration:underline}
 .comboitem .mt{font-size:12px;color:var(--ink3)}
 .tagchip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:11px;background:var(--field);border:1px solid var(--hair);font-size:13px;font-weight:600}
 .tagchip button{border:0;background:transparent;color:var(--ink3);cursor:pointer;display:grid;place-items:center;padding:0}
@@ -322,8 +324,26 @@ const Badge = ({c,children}) => <span className="badge"><span className="dot" st
 
 /* ---------- seed demo data ---------- */
 /* ---------- Supabase connection ---------- */
+/* =====================================================================
+   TEAM SETUP — paste your project's connection details between the quotes
+   below (Supabase -> Project Settings -> API). Once filled in, everyone
+   who opens the app skips the "Connect your database" screen and goes
+   straight to sign-in. The anon key is safe to embed in the page.
+   Leave the placeholders as-is to keep the per-device connect screen.
+   ===================================================================== */
+const BAKED = {
+  url: "https://tphzodyfdvrbuhwisvxv.supabase.co",
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRwaHpvZHlmZHZyYnVod2lzdnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5ODg4OTksImV4cCI6MjA5NjU2NDg5OX0.0sTESpaX6f43zEgijcUTUbcU_66KPMn4aWrFDT3q2ag"
+};
+const bakedReady = () =>
+  BAKED.url.startsWith('https://') && !BAKED.url.includes('YOUR-PROJECT') &&
+  BAKED.key.length > 20 && !BAKED.key.includes('YOUR-ANON');
+
 const SB_KEY='lewden_sb_cfg';
-const getCfg=()=>{try{return JSON.parse(localStorage.getItem(SB_KEY)||'null')}catch(e){return null}};
+const getCfg=()=>{
+  if(bakedReady()) return {url:BAKED.url,key:BAKED.key,baked:true};
+  try{return JSON.parse(localStorage.getItem(SB_KEY)||'null')}catch(e){return null}
+};
 const saveCfg=c=>{try{localStorage.setItem(SB_KEY,JSON.stringify(c))}catch(e){}};
 const clearCfg=()=>{try{localStorage.removeItem(SB_KEY)}catch(e){}};
 const ts=v=>v?Date.parse(v):0;
@@ -405,11 +425,31 @@ function SetupScreen({onSave}){
   </div></div>;
 }
 
-function LoginScreen({client,onReset}){
+function LoginScreen({client,onReset,baked}){
   const [email,setEmail]=useState('');const [pw,setPw]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+  const [mode,setMode]=useState('login');const [msg,setMsg]=useState('');
   const login=async()=>{if(busy)return;setBusy(true);setErr('');
     const {error}=await client.auth.signInWithPassword({email:email.trim(),password:pw});
     if(error){setErr(error.message);setBusy(false);}};
+  const sendReset=async()=>{if(busy)return;setErr('');setMsg('');
+    if(!email.trim()){setErr('Enter your email first.');return;}
+    setBusy(true);
+    const redirectTo=window.location.href.split('#')[0];
+    const {error}=await client.auth.resetPasswordForEmail(email.trim(),{redirectTo});
+    setBusy(false);
+    if(error)setErr(error.message);
+    else{setMsg('Check your inbox — we\u2019ve sent a link to reset your password. Open it on this device.');}
+  };
+  if(mode==='reset') return <div className="authwrap"><div className="glass pad" style={{maxWidth:400,width:'100%'}}>
+    <div className="logo" style={{marginBottom:14,display:'grid',placeItems:'center',background:'linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000))'}}><Icon n="bolt" style={{color:'#fff',width:22,height:22}}/></div>
+    <h2 style={{margin:'0 0 2px'}}>Reset password</h2>
+    <p style={{color:'var(--ink3)',fontSize:13,marginTop:0}}>We\u2019ll email you a link to set a new one.</p>
+    <Field label="Email"><input className="inp" type="email" autoFocus value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&sendReset()}/></Field>
+    {err&&<div style={{color:'var(--g-fatal)',fontSize:13,marginBottom:10}}>{err}</div>}
+    {msg&&<div style={{color:'var(--s-solved)',fontSize:13,marginBottom:10,lineHeight:1.5}}>{msg}</div>}
+    <button className="btn pri" style={{width:'100%'}} disabled={busy} onClick={sendReset}>{busy?'Sending…':'Send reset link'}</button>
+    <button className="btn" style={{width:'100%',marginTop:8}} onClick={()=>{setMode('login');setErr('');setMsg('')}}>Back to sign in</button>
+  </div></div>;
   return <div className="authwrap"><div className="glass pad" style={{maxWidth:400,width:'100%'}}>
     <div className="logo" style={{marginBottom:14,display:'grid',placeItems:'center',background:'linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000))'}}><Icon n="bolt" style={{color:'#fff',width:22,height:22}}/></div>
     <h2 style={{margin:'0 0 2px'}}>Sign in</h2>
@@ -418,15 +458,35 @@ function LoginScreen({client,onReset}){
     <Field label="Password"><input className="inp" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}/></Field>
     {err&&<div style={{color:'var(--g-fatal)',fontSize:13,marginBottom:10}}>{err}</div>}
     <button className="btn pri" style={{width:'100%'}} disabled={busy} onClick={login}>{busy?'Signing in…':'Sign in'}</button>
-    <button className="btn" style={{width:'100%',marginTop:8}} onClick={onReset}>Change database connection</button>
+    <button className="linkbtn" style={{width:'100%',marginTop:10}} onClick={()=>{setMode('reset');setErr('')}}>Forgot password?</button>
+    {!baked&&<button className="btn" style={{width:'100%',marginTop:8}} onClick={onReset}>Change database connection</button>}
   </div></div>;
 }
 
-function ErrorScreen({msg,onReset}){return <div className="authwrap"><div className="glass pad" style={{maxWidth:430,width:'100%'}}>
+function SetNewPasswordScreen({client,onDone}){
+  const [pw,setPw]=useState('');const [pw2,setPw2]=useState('');const [busy,setBusy]=useState(false);const [err,setErr]=useState('');
+  const ok=pw.length>=6&&pw===pw2;
+  const save=async()=>{if(!ok||busy)return;setBusy(true);setErr('');
+    const {error}=await client.auth.updateUser({password:pw});
+    setBusy(false);
+    if(error)setErr(error.message);else onDone();};
+  return <div className="authwrap"><div className="glass pad" style={{maxWidth:400,width:'100%'}}>
+    <div className="logo" style={{marginBottom:14,display:'grid',placeItems:'center',background:'linear-gradient(140deg,var(--accent),color-mix(in srgb,var(--accent) 68%,#000))'}}><Icon n="bolt" style={{color:'#fff',width:22,height:22}}/></div>
+    <h2 style={{margin:'0 0 2px'}}>Set a new password</h2>
+    <p style={{color:'var(--ink3)',fontSize:13,marginTop:0}}>Choose a new password for your account.</p>
+    <Field label="New password"><input className="inp" type="password" autoFocus value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 6 characters"/></Field>
+    <Field label="Confirm new password"><input className="inp" type="password" value={pw2} onChange={e=>setPw2(e.target.value)} onKeyDown={e=>e.key==='Enter'&&save()}/></Field>
+    {pw2&&pw!==pw2&&<div style={{color:'var(--g-fatal)',fontSize:12.5,marginBottom:8}}>Passwords don\u2019t match.</div>}
+    {err&&<div style={{color:'var(--g-fatal)',fontSize:13,marginBottom:10}}>{err}</div>}
+    <button className="btn pri" style={{width:'100%'}} disabled={!ok||busy} onClick={save}>{busy?'Saving…':'Save password'}</button>
+  </div></div>;
+}
+
+function ErrorScreen({msg,onReset,baked}){return <div className="authwrap"><div className="glass pad" style={{maxWidth:430,width:'100%'}}>
   <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:8}}><Icon n="alert" style={{width:22,height:22,color:'var(--g-fatal)'}}/><h2 style={{margin:0}}>Connection problem</h2></div>
   <p style={{color:'var(--ink2)',fontSize:13.5,lineHeight:1.5}}>{msg}</p>
-  <p style={{color:'var(--ink3)',fontSize:12.5,lineHeight:1.5}}>Check the URL and anon key, and that schema.sql has been run in Supabase.</p>
-  <button className="btn" style={{width:'100%'}} onClick={onReset}>Reset connection</button>
+  <p style={{color:'var(--ink3)',fontSize:12.5,lineHeight:1.5}}>{baked?'Please try again in a moment, or contact whoever set up the app.':'Check the URL and anon key, and that schema.sql has been run in Supabase.'}</p>
+  <button className="btn" style={{width:'100%'}} onClick={onReset}>{baked?'Retry':'Reset connection'}</button>
 </div></div>;}
 
 /* ---------- small reusable ---------- */
@@ -481,6 +541,7 @@ function App(){
   const [cfg,setCfg]=useState(getCfg);
   const [client,setClient]=useState(null);
   const [session,setSession]=useState(undefined);
+  const [recovery,setRecovery]=useState(false);
   const [phase,setPhase]=useState('boot');
   const [err,setErr]=useState('');
   const [toast,setToast]=useState('');
@@ -511,7 +572,7 @@ function App(){
     let c;try{c=window.supabase.createClient(cfg.url,cfg.key);}catch(e){setErr('That Supabase URL or key looks invalid.');setPhase('error');return;}
     setClient(c);
     c.auth.getSession().then(({data})=>setSession(data.session||null));
-    const r=c.auth.onAuthStateChange((_e,s)=>setSession(s||null));
+    const r=c.auth.onAuthStateChange((event,s)=>{if(event==='PASSWORD_RECOVERY')setRecovery(true);setSession(s||null);});
     const sub=r&&r.data&&r.data.subscription;
     return ()=>{if(sub&&sub.unsubscribe)sub.unsubscribe();};
   },[cfg]);
@@ -546,6 +607,7 @@ function App(){
   const go=(page,params={})=>setRoute({page,...params});
   const signOut=()=>client&&client.auth.signOut();
   const disconnect=()=>{clearCfg();window.location.reload();};
+  const changePassword=async np=>{const {error}=await client.auth.updateUser({password:np});return error?error.message:null;};
 
   // derived
   const openTickets=S.tickets.filter(t=>!['solved','closed'].includes(t.status));
@@ -616,12 +678,15 @@ function App(){
     client.from('visit_records').delete().eq('id',rid).then(({error})=>error&&fail(error));};
 
   // ---- connection / auth gating ----
+  const baked=!!(cfg&&cfg.baked);
+  const resetConn=()=>{ if(baked){window.location.reload();return;} clearCfg();setCfg(null);setErr('');setClient(null);setSession(undefined);setPhase('setup'); };
+  if(recovery&&client) return <SetNewPasswordScreen client={client} onDone={()=>setRecovery(false)}/>;
   if(phase==='setup') return <SetupScreen onSave={c=>{saveCfg(c);setCfg(c);setPhase('boot');}}/>;
-  if(phase==='error') return <ErrorScreen msg={err} onReset={()=>{clearCfg();setCfg(null);setErr('');setClient(null);setSession(undefined);setPhase('setup');}}/>;
-  if(phase==='login') return <LoginScreen client={client} onReset={()=>{clearCfg();setCfg(null);setClient(null);setSession(undefined);setPhase('setup');}}/>;
+  if(phase==='error') return <ErrorScreen msg={err} baked={baked} onReset={resetConn}/>;
+  if(phase==='login') return <LoginScreen client={client} baked={baked} onReset={resetConn}/>;
   if(phase!=='ready'||!me) return <SplashScreen text={phase==='loading'?'Loading your workspace…':'Starting…'}/>;
 
-  const api={S,me,go,modal,setModal,defs,layout,setLayout,cfg,signOut,disconnect,addTicket,updTicket,addTUpdate,addCustomer,updCustomer,linkCharger,unlinkCharger,updCharger,addChargerNote,addTask,toggleTask,delTask,addNote,updNote,delNote,addVisit,updVisit,addVisitRecord,delVisitRecord};
+  const api={S,me,go,modal,setModal,defs,layout,setLayout,cfg,baked,signOut,disconnect,changePassword,addTicket,updTicket,addTUpdate,addCustomer,updCustomer,linkCharger,unlinkCharger,updCharger,addChargerNote,addTask,toggleTask,delTask,addNote,updNote,delNote,addVisit,updVisit,addVisitRecord,delVisitRecord};
 
   const NAV=[
     {id:'dash',label:'Dashboard',short:'Home',icon:'grid'},
@@ -1345,6 +1410,29 @@ function VisitDetail({api,id}){
 }
 
 /* ---------- Settings ---------- */
+function ChangePassword({api}){
+  const [open,setOpen]=useState(false);
+  const [pw,setPw]=useState('');const [pw2,setPw2]=useState('');
+  const [busy,setBusy]=useState(false);const [msg,setMsg]=useState('');const [err,setErr]=useState('');
+  const ok=pw.length>=6&&pw===pw2;
+  const save=async()=>{if(!ok||busy)return;setBusy(true);setErr('');setMsg('');
+    const e=await api.changePassword(pw);setBusy(false);
+    if(e)setErr(e);else{setMsg('Password updated.');setPw('');setPw2('');setTimeout(()=>{setOpen(false);setMsg('')},1600);}};
+  if(!open) return <button className="btn" style={{width:'100%',marginTop:8}} onClick={()=>setOpen(true)}>Change password</button>;
+  return <div style={{marginTop:10,padding:12,border:'1px solid var(--hair)',borderRadius:12}}>
+    <div style={{fontWeight:640,fontSize:13.5,marginBottom:8}}>Change password</div>
+    <Field label="New password"><input className="inp" type="password" autoFocus value={pw} onChange={e=>setPw(e.target.value)} placeholder="At least 6 characters"/></Field>
+    <Field label="Confirm new password"><input className="inp" type="password" value={pw2} onChange={e=>setPw2(e.target.value)} onKeyDown={e=>e.key==='Enter'&&save()}/></Field>
+    {pw2&&pw!==pw2&&<div style={{color:'var(--g-fatal)',fontSize:12,marginBottom:6}}>Passwords don\u2019t match.</div>}
+    {err&&<div style={{color:'var(--g-fatal)',fontSize:12.5,marginBottom:6}}>{err}</div>}
+    {msg&&<div style={{color:'var(--s-solved)',fontSize:12.5,marginBottom:6}}>{msg}</div>}
+    <div style={{display:'flex',gap:8,marginTop:4}}>
+      <button className="btn" style={{flex:1}} onClick={()=>{setOpen(false);setErr('');setMsg('');setPw('');setPw2('')}}>Cancel</button>
+      <button className="btn pri" style={{flex:1}} disabled={!ok||busy} onClick={save}>{busy?'Saving…':'Update'}</button>
+    </div>
+  </div>;
+}
+
 function Settings({theme,setTheme,accent,setAccent,compact,setCompact,motion,setMotion,defs,setDefs,api}){
   const ACCENTS=[['#209f95','EV teal'],['#0A84FF','Blue'],['#BF5AF2','Purple'],['#30D158','Green'],['#FF9F0A','Amber'],['#FF453A','Red']];
   const Toggle=({on,set})=><button onClick={()=>set(!on)} style={{width:48,height:28,borderRadius:30,border:0,cursor:'pointer',
@@ -1394,8 +1482,9 @@ function Settings({theme,setTheme,accent,setAccent,compact,setCompact,motion,set
         <div className="kv"><span className="k">Team members</span><span className="v">{api.S.team.length}</span></div>
         <div style={{display:'flex',gap:8,marginTop:14}}>
           <button className="btn" style={{flex:1}} onClick={()=>api.signOut()}>Sign out</button>
-          <button className="btn" style={{flex:1}} onClick={()=>{if(window.confirm('Forget this device\u2019s saved database connection? You\u2019ll need the URL and key to reconnect.'))api.disconnect();}}>Disconnect</button>
+          {!api.baked&&<button className="btn" style={{flex:1}} onClick={()=>{if(window.confirm('Forget this device\u2019s saved database connection? You\u2019ll need the URL and key to reconnect.'))api.disconnect();}}>Disconnect</button>}
         </div>
+        <ChangePassword api={api}/>
         <div style={{fontSize:12,color:'var(--ink3)',marginTop:12,lineHeight:1.55}}>
           Tickets, customers, chargers and visits are shared across the team. Tasks, notes, and these appearance settings are private to you and sync to your account.</div>
       </div>
